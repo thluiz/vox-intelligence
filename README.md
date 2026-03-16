@@ -138,3 +138,11 @@ curl http://localhost:8080/api/vox-intelligence/health
 
 1. Create `templates/category/preset.ts` with system prompt + user prompt builder + response parser
 2. Add route in `server.ts`
+
+## Security TODO
+
+- [ ] **No authentication on any endpoint** — all routes are fully open (`server.ts:163-279`). Any process on the host can make arbitrary AI completions burning API credits. Fix: add `X-Api-Key` header validation.
+- [ ] **No rate limiting** — unlimited requests to expensive AI endpoints. Add per-client rate limiting.
+- [ ] **Prompt injection** — user-supplied transcript/metadata injected directly into AI prompts (`templates/podcasts/episode.ts`, `templates/dialog/holographic.ts`). The holographic dialog `req.message` is used as a Perplexity web search query (`holographic.ts:233`).
+- [ ] **CORS wildcard on MCP** — `Access-Control-Allow-Origin: *` on `/mcp` (`mcp.ts:314`). Restrict to known origins.
+- [ ] **Health endpoint leaks config** — `/health` exposes configured providers and default model chain (`server.ts:170-184`). Minimize exposed info.
