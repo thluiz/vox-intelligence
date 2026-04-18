@@ -5,6 +5,7 @@
 //           GET  /mcp  (SSE stream — minimal keep-alive for clients that need it)
 //
 // Tools:
+//   suggest_annotations       — suggest annotation-worthy moments from transcript
 //   podcast_episode         — process transcript → structured Vox note
 //   podcast_annotate        — annotate bookmarks with transcript context
 //   vision_extract_bookmarks — extract timestamps from screenshot images
@@ -16,6 +17,7 @@ import { resolveModelChain } from "./types";
 import { handlePodcastEpisode } from "./templates/podcasts/episode";
 import { handlePodcastAnnotate } from "./templates/podcasts/annotate";
 import { handleExtractBookmarks } from "./templates/vision/extract-bookmarks";
+import { handleSuggestAnnotations } from "./templates/podcasts/suggest-annotations";
 
 // ── MCP JSON-RPC types ────────────────────────────────────────────────────────
 
@@ -139,6 +141,57 @@ const TOOLS = [
     },
   },
   {
+    name: "suggest_annotations",
+    description:
+      "Analyze a podcast transcript and suggest annotation-worthy moments. " +
+      "Returns 8-20 suggestions with timestamps, tiers (concept/data/reflection), " +
+      "quotes, and overlap flags for existing annotations. " +
+      "Uses a cheap model (Gemini Flash) by default — ideal for first-pass analysis.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        episode: {
+          type: "object",
+          description: "Full episode JSON object",
+          properties: {
+            lang: { type: "string", description: "Language code (pt/en)" },
+            summary: { type: "string", description: "Episode summary" },
+            annotations: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  ts: { type: "string" },
+                  title: { type: "string" },
+                  description: { type: "string" },
+                },
+              },
+              description: "Existing annotations",
+            },
+            transcript: { type: "string", description: "Full transcript text" },
+            metadata: {
+              type: "object",
+              properties: {
+                title: { type: "string" },
+                podcast: { type: "string" },
+                duration: { type: "string" },
+              },
+            },
+            participants: {
+              type: "array",
+              items: { type: "string" },
+              description: "Episode participants",
+            },
+          },
+          required: ["transcript"],
+        },
+        model: { type: "string", description: "Override model" },
+        fallbackModels: { type: "array", items: { type: "string" } },
+      },
+      required: ["episode"],
+    },
+  },
+    {
     name: "chat",
     description:
       "Send a chat completion request through the vox-intelligence gateway. " +
@@ -265,7 +318,19 @@ async function dispatch(
           );
           resultData = { ...response, "x-parsed": parsed };
 
-        } else if (toolName === "chat") {
+        } else if (toolName === "suggest_annotations") {
+          const episode = args.episode as Record<string, unknown> | undefined;
+          if (!episode || !episode.transcript) {
+            return err(id, -32602, "Missing required args: episode with transcript");
+          }
+          const { response, parsed } = await handleSuggestAnnotations(
+            args as any,
+            factory,
+            config,
+          );
+          resultData = { ...response, "x-parsed": parsed };
+
+                } else if (toolName === "chat") {
           if (!args.messages) {
             return err(id, -32602, "Missing required args: messages");
           }
