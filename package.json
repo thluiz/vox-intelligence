@@ -1,0 +1,10 @@
+{
+  "name": "vox-intelligence",
+  "version": "1.0.0",
+  "description": "Generic AI gateway with strategy pattern for providers — OpenAI-compatible REST API",
+  "scripts": {
+    "start": "bun run server.ts",
+    "dev": "bun --watch run server.ts"
+  },
+  "private": true
+}

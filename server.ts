@@ -4,7 +4,9 @@ import { handlePodcastEpisode } from "./templates/podcasts/episode";
 import { handlePodcastAnnotate } from "./templates/podcasts/annotate";
 import { handleExtractBookmarks } from "./templates/vision/extract-bookmarks";
 import { handleHolographicDialog } from "./templates/dialog/holographic";
+import { handleSuggestAnnotations } from "./templates/podcasts/suggest-annotations";
 import { handleVoiceTranscribe } from "./templates/transcribe/voice";
+import { handleMeetingSummarize } from "./templates/meetings/summarize-master-course";
 import type { OpenAIChatRequest, OpenAIChatResponse, ExtractBookmarksRequest } from "./types";
 import { getTextContent } from "./types";
 import { handleMCP } from "./mcp";
@@ -160,6 +162,31 @@ async function handlePresetHolographicDialog(body: unknown): Promise<Response> {
   }
 }
 
+
+async function handlePresetSuggestAnnotations(body: unknown): Promise<Response> {
+  const req = body as Record<string, unknown>;
+  const episode = req.episode as Record<string, unknown> | undefined;
+  if (!episode || !episode.transcript) {
+    return errorResponse("Missing required fields: episode with transcript");
+  }
+
+  const sizeError = validateInputSize(String(episode.transcript));
+  if (sizeError) return errorResponse(sizeError, 413);
+
+  try {
+    const { response, parsed } = await handleSuggestAnnotations(
+      req as any,
+      factory,
+      config,
+    );
+
+    return jsonResponse({ ...response, "x-parsed": parsed });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorResponse(msg, 502);
+  }
+}
+
 const server = Bun.serve({
   port: config.port,
   async fetch(req) {
@@ -244,7 +271,17 @@ const server = Bun.serve({
       }
     }
 
-    // Preset: holographic dialog (Scholion)
+    // Preset: suggest annotations
+    if (path === "/presets/podcast/suggest-annotations" && req.method === "POST") {
+      try {
+        const body = await req.json();
+        return handlePresetSuggestAnnotations(body);
+      } catch {
+        return errorResponse("Invalid JSON body");
+      }
+    }
+
+        // Preset: holographic dialog (Scholion)
     if (path === "/presets/holographic-dialog" && req.method === "POST") {
       try {
         const body = await req.json();
@@ -272,6 +309,23 @@ const server = Bun.serve({
     // MCP endpoint (Streamable HTTP transport)
     if (path === "/mcp") {
       return handleMCP(req, factory, config);
+    }
+
+    // Preset: meeting summarize (master course encounters)
+    if (path === "/presets/meeting/summarize-master-course" && req.method === "POST") {
+      try {
+        const body = await req.json() as Record<string, unknown>;
+        if (!body.metadata || !body.transcript) {
+          return errorResponse("Missing required fields: metadata, transcript");
+        }
+        const sizeError = validateInputSize(String(body.transcript), JSON.stringify(body.metadata).length);
+        if (sizeError) return errorResponse(sizeError, 413);
+        const { response, parsed } = await handleMeetingSummarize(body as any, factory, config);
+        return jsonResponse({ ...response, "x-parsed": parsed });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return errorResponse(msg, 502);
+      }
     }
 
     return errorResponse("Not found", 404);
