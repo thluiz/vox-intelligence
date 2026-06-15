@@ -7,6 +7,7 @@ import { handleHolographicDialog } from "./templates/dialog/holographic";
 import { handleSuggestAnnotations } from "./templates/podcasts/suggest-annotations";
 import { handleVoiceTranscribe } from "./templates/transcribe/voice";
 import { handleMeetingSummarize } from "./templates/meetings/summarize-master-course";
+import { handleGhostAudit } from "./templates/quality/ghost-audit";
 import type { OpenAIChatRequest, OpenAIChatResponse, ExtractBookmarksRequest } from "./types";
 import { getTextContent } from "./types";
 import { handleMCP } from "./mcp";
@@ -321,6 +322,24 @@ const server = Bun.serve({
         const sizeError = validateInputSize(String(body.transcript), JSON.stringify(body.metadata).length);
         if (sizeError) return errorResponse(sizeError, 413);
         const { response, parsed } = await handleMeetingSummarize(body as any, factory, config);
+        return jsonResponse({ ...response, "x-parsed": parsed });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return errorResponse(msg, 502);
+      }
+    }
+
+    // Preset: ghost-writer voice audit (Scholion)
+    if (path === "/presets/scholion/ghost-audit" && req.method === "POST") {
+      try {
+        const body = await req.json() as Record<string, unknown>;
+        if (!body.content || typeof body.content !== "string") {
+          return errorResponse("Missing required field: content");
+        }
+        if (body.content.length > 200000) {
+          return errorResponse("Note too large for audit", 413);
+        }
+        const { response, parsed } = await handleGhostAudit(body as any, factory, config);
         return jsonResponse({ ...response, "x-parsed": parsed });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
