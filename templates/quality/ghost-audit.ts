@@ -58,7 +58,7 @@ NÃO duplique o /style-test (que já pega, por regex: PT-EU, vocabulário banido
 9. TRAVESSAO_DE_EFEITO — travessão (ou traço/hífen/dois-pontos) usado como pausa dramática setup→punch, removível por ponto final sem perder sentido. Só é aceitável o inciso genuíno que, removido, quebra a gramática.
 10. EDITORIALIZACAO — narrar o efeito da história ("a gente sente o peso", "isso muda tudo") em vez de deixar o leitor sentir.
 11. EFEITO_ABSTRATO — "colocações relevantes", "contribuição importante" em vez do conteúdo concreto do que foi dito/feito.
-12. SOURCE_OR_SILENCE — afirmação factual (etimologia, datação, atribuição, citação, glosa, número) SEM fonte inline nem cobertura no bloco sources do frontmatter. Liste cada uma. Esta é a violação mais grave: severity "block".
+12. SOURCE_OR_SILENCE — afirmação factual (etimologia, datação, atribuição, citação, glosa, número) apresentada como fato assentado, SEM fonte inline, SEM cobertura no bloco sources do frontmatter, E SEM link para outra nota. Severity "block". DUAS EXCEÇÕES que NÃO são violação, não marque: (a) afirmação conectiva ancorada por link para outra nota Scholion — wikilink [[slug]] / [[slug|texto]] OU markdown [texto](/notes/slug) — conta como fonte: a citação vive na nota linkada, que você não vê aqui. (b) em doc de pesquisa, item marcado com ⚠ é provisório-reconhecido pelo autor (a marca já declara "fonte ainda não verificada"). Só é violação a afirmação dada como fato verificado, sem ⚠, sem fonte e sem link.
 13. VOZ_GENERICA — se, tirando o nome do autor, o texto poderia ter sido escrito por qualquer IA acadêmica balanceada, aponte o trecho mais sem-voz.
 14. PT_EU — qualquer português europeu que escapou ("facto", "está-se", "comboio", ortografia/sintaxe lusitana). severity "block".
 
