@@ -8,6 +8,7 @@ import { handleSuggestAnnotations } from "./templates/podcasts/suggest-annotatio
 import { handleVoiceTranscribe } from "./templates/transcribe/voice";
 import { handleMeetingSummarize } from "./templates/meetings/summarize-master-course";
 import { handleGhostAudit } from "./templates/quality/ghost-audit";
+import { handleEtymologyNote } from "./templates/scholion/etymology-note";
 import type { OpenAIChatRequest, OpenAIChatResponse, ExtractBookmarksRequest } from "./types";
 import { getTextContent } from "./types";
 import { handleMCP } from "./mcp";
@@ -325,6 +326,24 @@ const server = Bun.serve({
         return jsonResponse({ ...response, "x-parsed": parsed });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
+        return errorResponse(msg, 502);
+      }
+    }
+
+    // Preset: Chinese etymology note synthesis (Scholion radicals pipeline)
+    if (path === "/presets/scholion/etymology-note" && req.method === "POST") {
+      try {
+        const body = await req.json() as Record<string, unknown>;
+        for (const field of ["char", "radicalNum", "hex", "date", "gabarito", "dump"]) {
+          if (!body[field]) return errorResponse(`Missing required field: ${field}`);
+        }
+        const sizeError = validateInputSize(String(body.dump), String(body.gabarito).length);
+        if (sizeError) return errorResponse(sizeError, 413);
+        const result = await handleEtymologyNote(body as any, factory, config);
+        return jsonResponse(result);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("JSON Parse")) return errorResponse("Invalid JSON body");
         return errorResponse(msg, 502);
       }
     }
