@@ -2,6 +2,17 @@
 
 All notable changes to vox-intelligence are documented in this file.
 
+## [0.4.0] — 2026-07-06
+
+### Ghost-audit hardening
+
+- **JSON repair round-trip** — invalid JSON from the model now triggers one repair call ("responda apenas o JSON corrigido") before failing with 502. Reduces silent fail-open releases at the commit gate
+- **Quote location** — every finding gains a `line` field (1-based, computed server-side with whitespace-tolerant matching); `line: null` flags quotes not found in the note (possible hallucination)
+- **`strict: true`** — runs the two preset models independently and unions their findings (dedupe by rule+quote); verdict recomputed from the union. For pre-publication audits where a false green costs more
+- **Five new rules** synced from the ghost-writer checklist: `CENA_FABRICADA` (impersonal invented scenes), `REDUNDANCIA_POS_BOLD`, `CONDICIONAL_VERBOSA`, `ESCALA_TEMPORAL`, `CITACAO_VERBATIM_NAO_CONFIRMADA` (unconfirmed verbatim quotes from auto-transcription)
+- **Category awareness** — `category: etymology|disciple` relaxes `TRAVESSAO_DE_EFEITO`/`PARALELISMO_MECANICO` over dictionary-gloss structure (matches /style-test behavior)
+- **Regression fixtures** — `templates/quality/fixtures/` + `run-fixtures.ts`: known-red (source-or-silence), known-yellow (voice warns), known-green notes with expected verdicts/rules. Run after prompt edits or model swaps
+
 ## [0.3.0] — 2026-03-04
 
 ### Scholion integration
