@@ -1,0 +1,21 @@
+[
+  {
+    "file": "red-source-or-silence.md",
+    "verdict": ["red"],
+    "mustIncludeRules": ["SOURCE_OR_SILENCE"]
+  },
+  {
+    "file": "yellow-voice.md",
+    "verdict": ["yellow"],
+    "mustIncludeAnyRule": [
+      "FECHO_AFORISTICO",
+      "TAGLINE_REDUNDANTE",
+      "TRES_BATIDAS",
+      "TRAVESSAO_DE_EFEITO"
+    ]
+  },
+  {
+    "file": "green-clean.md",
+    "verdict": ["green"]
+  }
+]

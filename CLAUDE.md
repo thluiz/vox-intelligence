@@ -20,6 +20,7 @@ vox-intelligence exposes an MCP server at `POST /mcp` (Streamable HTTP transport
 | `POST /presets/podcast/episode` | Podcast episode preset (HTTP direct) |
 | `POST /presets/podcast/annotate` | Podcast annotate preset (HTTP direct) |
 | `POST /presets/vision/extract-bookmarks` | Vision preset (HTTP direct) |
+| `POST /presets/scholion/ghost-audit` | Ghost-writer voice audit for Scholion notes (HTTP direct). Body: `{content, slug?, strict?}`. Regression eval: `bun templates/quality/run-fixtures.ts` |
 
 ### MCP Tools
 
