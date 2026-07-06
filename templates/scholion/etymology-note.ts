@@ -143,6 +143,10 @@ export async function handleEtymologyNote(
   } catch (err) {
     // One repair round-trip: hand back the invalid output with the exact reason.
     const reason = err instanceof Error ? err.message : String(err);
+    console.log(
+      `[etymology-note] ${req.char}: parse falhou (${reason}); ` +
+      `head da saída: ${JSON.stringify(result.content.slice(0, 300))}`,
+    );
     const repairMessages: ChatMessage[] = [
       ...messages,
       { role: "assistant", content: result.content },
@@ -158,7 +162,18 @@ export async function handleEtymologyNote(
       { model: "", messages: repairMessages, maxTokens: config.maxOutputTokens, temperature: 0 },
       modelChain,
     );
-    parsed = parseNoteResponse(retry.content, req.hex);
+    let retryParsed: { slug: string; note: string };
+    try {
+      retryParsed = parseNoteResponse(retry.content, req.hex);
+    } catch (err2) {
+      const reason2 = err2 instanceof Error ? err2.message : String(err2);
+      console.log(
+        `[etymology-note] ${req.char}: repair também falhou (${reason2}); ` +
+        `head da saída: ${JSON.stringify(retry.content.slice(0, 300))}`,
+      );
+      throw err2;
+    }
+    parsed = retryParsed;
     model = retry.model;
     usage = retry.usage && result.usage
       ? {
