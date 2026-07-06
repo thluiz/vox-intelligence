@@ -88,10 +88,19 @@ function buildUserPrompt(req: EtymologyNoteRequest): string {
   ].join("\n");
 }
 
+// Models often leave the jyutping tone digit in the slug (dau2 → dau); strip
+// digits from the syllable segments deterministically instead of burning a
+// repair round-trip on it.
+function normalizeSlug(slug: string): string {
+  const m = slug.match(/^etimologia-de-([a-z0-9]+)-([a-z0-9]+)-([0-9a-f]+)$/);
+  if (!m) return slug;
+  return `etimologia-de-${m[1].replace(/[0-9]/g, "")}-${m[2].replace(/[0-9]/g, "")}-${m[3]}`;
+}
+
 // Parse + minimal validation of the SLUG/note contract. Throws with a precise
 // reason (fed back to the model on the repair round-trip).
 function parseNoteResponse(raw: string, hex: string): { slug: string; note: string } {
-  const slugMatch = raw.match(/SLUG:\s*(etimologia-de-[a-z]+-[a-z]+-[0-9a-f]+)/i);
+  const slugMatch = raw.match(/SLUG:\s*(etimologia-de-[a-z0-9]+-[a-z0-9]+-[0-9a-f]+)/i);
   const fmStart = raw.indexOf("\n---");
   const firstDash = raw.trimStart().startsWith("---")
     ? raw.indexOf("---")
@@ -99,13 +108,17 @@ function parseNoteResponse(raw: string, hex: string): { slug: string; note: stri
   if (!slugMatch) throw new Error("saída sem linha 'SLUG: etimologia-de-...' válida");
   if (firstDash < 0) throw new Error("saída sem frontmatter começando em '---'");
 
-  const slug = slugMatch[1].toLowerCase();
+  const slug = normalizeSlug(slugMatch[1].toLowerCase());
   if (!slug.endsWith(`-${hex.toLowerCase()}`)) {
     throw new Error(`slug '${slug}' não termina no hex '${hex.toLowerCase()}'`);
   }
 
   let note = raw.slice(firstDash).trim();
   note = note.replace(/^```[a-z]*\n/, "").replace(/\n```$/, "").trim() + "\n";
+  // Convenção Scholion: summary entre aspas SIMPLES (YAML). Requote
+  // deterministicamente quando o modelo usa aspas duplas.
+  note = note.replace(/^summary:\s*"(.*)"\s*$/m, (_all, v: string) =>
+    `summary: '${v.replace(/\\"/g, '"').replace(/'/g, "''")}'`);
 
   const errs: string[] = [];
   if (!note.startsWith("---")) errs.push("não começa com frontmatter");
