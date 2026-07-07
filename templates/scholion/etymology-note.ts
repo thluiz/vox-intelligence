@@ -64,7 +64,7 @@ REGRAS INEGOCIÁVEIS:
 - 段注 (Duan Yucai) quase nunca vem no dump: marque "(não obtido — shuowen.org retornou listagem; zdic.net retornou HTTP 404)".
 - 鄭張尚芳 (Zhengzhang) ausente da tabela → "(não retornou dados — ausente da tabela do 小學堂)".
 - No hanziyuan, "Importance by frequency 常用频率: 99999" é valor-sentinela para SEM RANKING — reporte "(sem ranking na fonte)" ou omita a linha; NUNCA interprete o número como frequência alta ou baixa.
-- A seção "Divergências entre fontes" registra APENAS divergências atestadas entre as fontes do dump. NÃO acrescente inferências próprias (correspondências fonológicas, deduções históricas, conclusões que nenhuma fonte afirma).
+- A seção "Divergências entre fontes" registra APENAS divergências atestadas entre as fontes do dump. NÃO acrescente inferências próprias (correspondências fonológicas, deduções históricas, conclusões que nenhuma fonte afirma). Exemplo PROIBIDO: "a leitura dau2 é consistente com o 中古音 (tom 上 → tom 2 cantonês)" — nenhuma fonte afirma essa correspondência; registre as leituras de cada fonte e pare aí.
 
 FRONTMATTER: idêntico ao MODELO, com o date fornecido pelo usuário, exatamente. summary sempre entre aspas simples.
 ABERTURA: "É o radical Kangxi nº <N> (<char>, <glosa curta>). <variante do radical, se houver, ex.: 'Como radical à esquerda, assume a forma X.'> Registro filológico, sem vínculo a nome kung fu. Ver [Os 214 radicais Kangxi](/notes/os-214-radicais-kangxi/)."
