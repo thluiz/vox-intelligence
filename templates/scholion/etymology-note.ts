@@ -48,9 +48,11 @@ export interface EtymologyNoteResult {
   usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
 }
 
-// Same chain the gateway defaults to: deepseek-v3.2 is the cheap workhorse and
-// strong on Chinese; gpt-5.2 as quality fallback. Callers can override.
-const PRESET_MODELS = ["openrouter/deepseek/deepseek-v3.2", "openrouter/openai/gpt-5.2"];
+// deepseek-v3.2 was tried first (cheap) and rejected by the author: it
+// hallucinates glosses/attributions in this task. Author picked gpt-5.4
+// (2026-07-07) — successor of the gpt-5.2 his ghost-audit testing validated
+// for source-or-silence. gpt-5.2 as fallback.
+const PRESET_MODELS = ["openrouter/openai/gpt-5.4", "openrouter/openai/gpt-5.2"];
 
 const SYSTEM_PROMPT = `Você é um filólogo que redige UMA nota de etimologia de caractere chinês para o Scholion, em PORTUGUÊS BRASILEIRO, a partir de DADOS BRUTOS de 7 fontes. Replique EXATAMENTE o formato do MODELO fornecido (mesmas seções ####, tabela de evolução, bloco de fonologia, seção final "Divergências entre fontes").
 
