@@ -65,7 +65,12 @@ REGRAS INEGOCIÁVEIS:
 - Contagem de caracteres derivados: se os DADOS não a trazem, OMITA essa cláusula da abertura (não escreva "não obtido" para ela).
 - 段注 (Duan Yucai) quase nunca vem no dump: marque "(não obtido — shuowen.org retornou listagem; zdic.net retornou HTTP 404)".
 - 鄭張尚芳 (Zhengzhang) ausente da tabela → "(não retornou dados — ausente da tabela do 小學堂)".
-- Atribuição por seção: cada dado citado pertence à fonte do header "## <fonte>" do dump onde ele aparece. Os rótulos 略說, 詳解 e 形義通解 são da CUHK (漢語多功能字庫); o rótulo 今按 é do 小學堂. NUNCA atribua comentário da CUHK ao 小學堂, nem vice-versa.
+- Atribuição por seção: cada dado citado pertence à fonte do header "## <fonte>" do dump onde ele aparece. Os rótulos 略說, 詳解 e 形義通解 são da CUHK (漢語多功能字庫); o rótulo 今按 é do 小學堂. NUNCA atribua comentário da CUHK ao 小學堂, nem vice-versa, e NUNCA funda as duas num rótulo "小學堂 / CUHK".
+- Tons: reproduza apenas o número do tom como está na fonte (ex.: "dau2"). NUNCA descreva contorno ou altura ("ascendente", "descendente", "alto", "baixo") — as fontes não trazem isso.
+- Cada fonte fala por si: registre a leitura de cada fonte separadamente. NÃO escreva "confirmado pela X" — se duas fontes trazem o mesmo valor, diga "X e Y registram <valor>".
+- Só escreva "verbatim convergente"/"idênticas" se os textos forem realmente idênticos caractere a caractere; se uma fonte omite trecho (a cauda 凡...皆从..., o fanqie), descreva a diferença como faz o MODELO.
+- Reconstruções do 上古音: o 小學堂 separa 聲母 e 韻母 — preserve a separação com espaço, como no MODELO (ex.: "p i̯ər"), sem concatenar.
+- Identificadores de artefatos/formas (ex.: 璽彙1069, 甲3249) e datações de dinastia: copie EXATAMENTE do dump, dígito a dígito; nunca ajuste ou "corrija".
 - No hanziyuan, "Importance by frequency 常用频率: 99999" é valor-sentinela para SEM RANKING — reporte "(sem ranking na fonte)" ou omita a linha; NUNCA interprete o número como frequência alta ou baixa.
 - A seção "Divergências entre fontes" registra APENAS divergências atestadas entre as fontes do dump. NÃO acrescente inferências próprias (correspondências fonológicas, deduções históricas, conclusões que nenhuma fonte afirma). Exemplo PROIBIDO: "a leitura dau2 é consistente com o 中古音 (tom 上 → tom 2 cantonês)" — nenhuma fonte afirma essa correspondência; registre as leituras de cada fonte e pare aí.
 
