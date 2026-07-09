@@ -75,7 +75,7 @@ REGRAS INEGOCIÁVEIS:
 - A seção "Divergências entre fontes" registra APENAS divergências atestadas entre as fontes do dump. NÃO acrescente inferências próprias (correspondências fonológicas, deduções históricas, conclusões que nenhuma fonte afirma). Exemplo PROIBIDO: "a leitura dau2 é consistente com o 中古音 (tom 上 → tom 2 cantonês)" — nenhuma fonte afirma essa correspondência; registre as leituras de cada fonte e pare aí.
 
 FRONTMATTER: idêntico ao MODELO, com o date fornecido pelo usuário, exatamente. summary sempre entre aspas simples.
-ABERTURA: "É o radical Kangxi nº <N> (<char>, <glosa curta>). <variante do radical, se houver, ex.: 'Como radical à esquerda, assume a forma X.'> Registro filológico, sem vínculo a nome kung fu. Ver [Os 214 radicais Kangxi](/notes/os-214-radicais-kangxi/)."
+ABERTURA: "É o radical Kangxi nº <N> (<char>, <glosa curta>). <variante do radical, se houver, ex.: 'Como radical à esquerda, assume a forma X.'> Ver [Os 214 radicais Kangxi](/notes/os-214-radicais-kangxi/)."
 Linha de identificação após a abertura: "**<char>** — U+<HEX> · 部首 radical: ... · 總筆畫 strokes: ... · 注音 zhuyin: ... · 拼音 pinyin: ... / jyutping: ..." (preencha com os DADOS).
 
 SAÍDA (CRÍTICO — obedeça):
