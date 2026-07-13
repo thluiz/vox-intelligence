@@ -9,6 +9,7 @@
 //   podcast_episode         — process transcript → structured Vox note
 //   podcast_annotate        — annotate bookmarks with transcript context
 //   vision_extract_bookmarks — extract timestamps from screenshot images
+//   quote_note              — compose a verified-quote Scholion note from a raw quote
 //   chat                    — generic gateway call with fallback chain
 
 import type { ProviderFactory } from "./providers/provider";
@@ -18,6 +19,7 @@ import { handlePodcastEpisode } from "./templates/podcasts/episode";
 import { handlePodcastAnnotate } from "./templates/podcasts/annotate";
 import { handleExtractBookmarks } from "./templates/vision/extract-bookmarks";
 import { handleSuggestAnnotations } from "./templates/podcasts/suggest-annotations";
+import { handleQuoteNote } from "./templates/scholion/quote-note";
 
 // ── MCP JSON-RPC types ────────────────────────────────────────────────────────
 
@@ -191,6 +193,47 @@ const TOOLS = [
       required: ["episode"],
     },
   },
+  {
+    name: "quote_note",
+    description:
+      "Compose ONE verified-quote note for Scholion (mirrors the add-scholion-quote skill) " +
+      "from a raw quote + presumed author. Researches authorship on the web and writes a " +
+      "PT-BR note (frontmatter + body) under source-or-silence: the citation becomes the " +
+      "title, the body only situates it in its source. Returns {slug, note, authorship, " +
+      "lexicalWarnings} — it ONLY composes; writing to disk and git commit are the caller's " +
+      "job. Run ghost-audit separately as the voice gate before publishing.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        quote: {
+          type: "string",
+          description: "The raw citation / paraphrase to turn into a note (becomes the title).",
+        },
+        presumedAuthor: {
+          type: "string",
+          description: "Who the user believes said it — improves the authorship search.",
+        },
+        context: {
+          type: "string",
+          description:
+            "Optional source/context. If it names a work (book, essay), that work is treated " +
+            "as THE source and the body just situates the quote in it.",
+        },
+        date: {
+          type: "string",
+          description:
+            "Frontmatter date, ISO 8601 + offset, from the real local clock " +
+            "(e.g. run `date +%Y-%m-%dT%H:%M:%S%:z`). Never invented server-side.",
+        },
+        model: {
+          type: "string",
+          description: "Override primary model. Omit for the preset default chain.",
+        },
+        fallbackModels: { type: "array", items: { type: "string" } },
+      },
+      required: ["quote", "date"],
+    },
+  },
     {
     name: "chat",
     description:
@@ -330,7 +373,13 @@ async function dispatch(
           );
           resultData = { ...response, "x-parsed": parsed };
 
-                } else if (toolName === "chat") {
+        } else if (toolName === "quote_note") {
+          if (!args.quote || !args.date) {
+            return err(id, -32602, "Missing required args: quote, date");
+          }
+          resultData = await handleQuoteNote(args as any, factory, config);
+
+        } else if (toolName === "chat") {
           if (!args.messages) {
             return err(id, -32602, "Missing required args: messages");
           }
