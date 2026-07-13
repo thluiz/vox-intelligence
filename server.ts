@@ -9,6 +9,7 @@ import { handleVoiceTranscribe } from "./templates/transcribe/voice";
 import { handleMeetingSummarize } from "./templates/meetings/summarize-master-course";
 import { handleGhostAudit } from "./templates/quality/ghost-audit";
 import { handleEtymologyNote } from "./templates/scholion/etymology-note";
+import { handleQuoteNote } from "./templates/scholion/quote-note";
 import type { OpenAIChatRequest, OpenAIChatResponse, ExtractBookmarksRequest } from "./types";
 import { getTextContent } from "./types";
 import { handleMCP } from "./mcp";
@@ -340,6 +341,27 @@ const server = Bun.serve({
         const sizeError = validateInputSize(String(body.dump), String(body.gabarito).length);
         if (sizeError) return errorResponse(sizeError, 413);
         const result = await handleEtymologyNote(body as any, factory, config);
+        return jsonResponse(result);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("JSON Parse")) return errorResponse("Invalid JSON body");
+        return errorResponse(msg, 502);
+      }
+    }
+
+    // Preset: verified-quote note synthesis (Scholion add-scholion-quote)
+    if (path === "/presets/scholion/quote-note" && req.method === "POST") {
+      try {
+        const body = await req.json() as Record<string, unknown>;
+        if (!body.quote || typeof body.quote !== "string") {
+          return errorResponse("Missing required field: quote");
+        }
+        if (!body.date || typeof body.date !== "string") {
+          return errorResponse("Missing required field: date (ISO 8601 + offset, caller's clock)");
+        }
+        const sizeError = validateInputSize(String(body.quote), String(body.context || "").length);
+        if (sizeError) return errorResponse(sizeError, 413);
+        const result = await handleQuoteNote(body as any, factory, config);
         return jsonResponse(result);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
