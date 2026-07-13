@@ -23,8 +23,33 @@ export interface QuoteNoteRequest {
   presumedAuthor?: string;
   // Optional source/context; if it names a work, that work is THE source.
   context?: string;
+  // Optional explicit source URL (Amazon/Kindle link) — activates book mode.
+  sourceUrl?: string;
+  // Optional explicit "this came from a book" flag — activates book mode.
+  fromBook?: boolean;
   model?: string;
   fallbackModels?: string[];
+}
+
+// Amazon / Kindle / short-link — strong signal that the quote came from a book.
+const BOOK_URL = /https?:\/\/(?:[a-z0-9-]+\.)?(?:amazon\.[a-z.]+|amzn\.[a-z.]+|amz\.onl|a\.co|kindle\.[a-z.]+|read\.amazon\.[a-z.]+)\/\S+/i;
+
+function detectBook(req: QuoteNoteRequest): { bookMode: boolean; bookUrl: string | null } {
+  const bookUrl =
+    (req.sourceUrl && req.sourceUrl.match(BOOK_URL)?.[0]) ||
+    req.quote.match(BOOK_URL)?.[0] ||
+    (req.context && req.context.match(BOOK_URL)?.[0]) ||
+    null;
+  // Book mode when: an explicit flag/URL, a detected book link, OR a context
+  // that names a work (the caller asserting the source).
+  const bookMode = Boolean(req.fromBook || bookUrl || (req.context && req.context.trim()));
+  return { bookMode, bookUrl };
+}
+
+// The title is the citation only — never a URL. Strip any book link the Kindle
+// share appended to the quote text.
+function cleanQuote(quote: string): string {
+  return quote.replace(BOOK_URL, "").replace(/\s+/g, " ").trim();
 }
 
 export interface QuoteSource {
@@ -81,15 +106,28 @@ CAMPOS DO JSON:
 SAÍDA (CRÍTICO):
 - Responda APENAS com o objeto JSON válido. Sem texto antes/depois, sem cercas de código, sem markdown.`;
 
-function buildUserPrompt(req: QuoteNoteRequest, searchContext: string): string {
+function buildUserPrompt(
+  req: QuoteNoteRequest,
+  searchContext: string,
+  book: { bookMode: boolean; bookUrl: string | null },
+): string {
   const parts: string[] = [
-    "===== FRASE (vira o title; NÃO repetir no body) =====",
-    req.quote,
+    "===== FRASE (vira o title; NÃO repetir no body; o title é SÓ a citação, sem URL) =====",
+    cleanQuote(req.quote),
     "",
     `===== AUTOR PRESUMIDO ===== ${req.presumedAuthor || "(não informado)"}`,
   ];
   if (req.context && req.context.trim()) {
     parts.push("", "===== CONTEXTO FORNECIDO PELO SOLICITANTE =====", req.context.trim());
+  }
+  if (book.bookMode) {
+    parts.push(
+      "",
+      "===== MODO LIVRO (ATIVO) =====",
+      "A citação vem de um LIVRO — a fonte é DEFINITIVA; authorship.verified = true; NÃO a questione." +
+        (book.bookUrl ? ` Inclua esta URL numa source com kind:book: ${book.bookUrl}` : "") +
+        " O body é ESTRITAMENTE MÍNIMO: UMA frase que só situa (autor + obra). PROIBIDO pesquisar dúvida, comentar edição/prefácio/circulação, ou acrescentar qualquer coisa além de situar.",
+    );
   }
   parts.push(
     "",
@@ -136,7 +174,7 @@ function buildSearchQuery(req: QuoteNoteRequest): string {
   }
   const presumed = req.presumedAuthor ? ` It is often attributed to ${req.presumedAuthor}.` : "";
   return (
-    `Who originally said or wrote the quote: "${req.quote}"?${presumed} ` +
+    `Who originally said or wrote the quote: "${cleanQuote(req.quote)}"?${presumed} ` +
     "Consult Quote Investigator (quoteinvestigator.com) and Wikiquote. " +
     "Report: the earliest exact wording; the real author with the work, year and context; " +
     "any well-known misattributions and how the misattribution spread. " +
@@ -245,6 +283,8 @@ export async function handleQuoteNote(
   factory: ProviderFactory,
   config: Config,
 ): Promise<QuoteNoteResult> {
+  const book = detectBook(req);
+
   // 1. Research authorship (best-effort).
   let searchContext = "";
   if (config.openrouterApiKey) {
@@ -257,7 +297,7 @@ export async function handleQuoteNote(
 
   const messages: ChatMessage[] = [
     { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: buildUserPrompt(req, searchContext) },
+    { role: "user", content: buildUserPrompt(req, searchContext, book) },
   ];
 
   const modelChain = resolveModelChain(req.model, req.fallbackModels, PRESET_MODELS, config.defaultModels);
