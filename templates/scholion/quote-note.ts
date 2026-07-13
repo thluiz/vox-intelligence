@@ -1,24 +1,14 @@
 /**
- * quote-note.ts — Scholion verified-quote note preset
+ * quote-note.ts — Scholion verified-quote composer (LLM only)
  *
- * Synthesises ONE Scholion quote note (PT-BR markdown, frontmatter + body) from
- * a raw quote + a presumed author. Mirrors the `add-scholion-quote` skill: it
- * researches authorship on the web (Perplexity), then composes a note whose
- * title IS the citation and whose body carries only the authorship context —
- * under strict source-or-silence (never invent an attribution).
+ * Researches authorship on the web and composes the CONTENT of one Scholion
+ * quote note as STRUCTURED JSON. It does NOT build the markdown / frontmatter —
+ * that (the "how to publish" knowledge) belongs to the caller (Toscanini),
+ * which serialises these fields deterministically. This keeps vox-intelligence
+ * strictly an AI gateway.
  *
- * Contract with the model (line-based, like etymology-note.ts):
- *   line 1: `SLUG: <slug>`
- *   line 2: `AUTHORSHIP: verified` | `AUTHORSHIP: unverified — <motivo>`
- *   line 3: blank
- *   line 4+: the full note, starting at `---` (frontmatter)
- *
- * The server parses/validates that contract and does ONE repair round-trip on
- * malformed output before failing (mirrors etymology-note.ts / ghost-audit.ts).
- *
- * This preset only SYNTHESISES. Writing to disk + git commit is the caller's
- * job (Toscanini). The ghost-audit structural gate is run separately by the
- * caller against the returned note.
+ * The model returns a single JSON object; the server validates it and does ONE
+ * repair round-trip on malformed output before failing.
  */
 
 import type { ChatMessage } from "../../types";
@@ -27,76 +17,76 @@ import type { Config } from "../../config";
 import { ProviderFactory } from "../../providers/provider";
 
 export interface QuoteNoteRequest {
-  // The raw citation / paraphrase the user supplied.
+  // The raw citation / paraphrase (becomes the title).
   quote: string;
-  // Who the user believes said it (optional — improves the authorship search).
+  // Who the user believes said it (improves the authorship search).
   presumedAuthor?: string;
-  // Optional extra context the caller wants folded into the research.
+  // Optional source/context; if it names a work, that work is THE source.
   context?: string;
-  // Frontmatter date, ISO with offset — computed by the CALLER with the real
-  // local clock (never invented server-side).
-  date: string;
   model?: string;
   fallbackModels?: string[];
 }
 
+export interface QuoteSource {
+  title: string;
+  author?: string;
+  year?: number;
+  publisher?: string;
+  url?: string;
+  kind: string;
+}
+
 export interface QuoteNoteResult {
   slug: string;
-  note: string;
-  // verified=false when no primary source pins the attribution — the caller
-  // uses this to gate publication (source-or-silence).
+  title: string;
+  summary: string;
+  tags: string[];
+  has_commentary: boolean;
+  sources: QuoteSource[];
+  body: string;
+  // verified=false when no primary source pins the attribution.
   authorship: { verified: boolean; notes: string };
-  // Deterministic lexical hits that survived the repair round-trip (PT-EU,
-  // banned vocab). Non-fatal — the caller's ghost-audit is the hard gate.
+  // Deterministic lexical hits in the body (PT-EU, banned vocab). Non-fatal.
   lexicalWarnings: string[];
   model: string;
   usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
 }
 
-// Same source-or-silence-validated chain the etymology-note preset settled on
-// (deepseek hallucinates attributions in this task). Confirmar com o autor.
+// Same source-or-silence-validated chain the etymology-note preset settled on.
 const PRESET_MODELS = ["openrouter/openai/gpt-5.4", "openrouter/openai/gpt-5.2"];
 
-const SYSTEM_PROMPT = `Você redige UMA nota de citação verificada para o Scholion, em PORTUGUÊS BRASILEIRO, a partir de uma FRASE, um AUTOR PRESUMIDO e um CONTEXTO DE PESQUISA de autoria. A citação vira o TÍTULO; o corpo traz APENAS o contexto de autoria (quem disse, onde, quando).
+const SYSTEM_PROMPT = `Você compõe o CONTEÚDO de UMA nota de citação verificada para o Scholion, em PORTUGUÊS BRASILEIRO, a partir de uma FRASE, um AUTOR PRESUMIDO e um CONTEXTO DE PESQUISA de autoria. Você NÃO formata markdown nem YAML — devolve apenas um objeto JSON com os campos. A citação é o title; o body traz APENAS o contexto de autoria (quem disse, onde, quando).
 
-REGRAS INEGOCIÁVEIS:
+REGRAS INEGOCIÁVEIS (valem para body e summary):
 - Source-or-silence: NUNCA invente atribuição, obra, data ou fonte. Só afirme o que o CONTEXTO DE PESQUISA ou o CONTEXTO FORNECIDO sustentam.
-- FONTE FORNECIDA PELO SOLICITANTE: se o CONTEXTO FORNECIDO nomeia uma obra (livro, ensaio, discurso) de onde a citação foi extraída, essa obra É a fonte — registre-a em sources e atribua a passagem a ela. Nesse caso a autoria está estabelecida pela própria proveniência informada: marque AUTHORSHIP: verified. Só marque AUTHORSHIP: unverified quando NÃO houver fonte fornecida E a pesquisa não fixar a autoria.
-- COM FONTE FORNECIDA, o corpo é CURTO (1–2 frases) e APENAS situa a citação: obra, autor, capítulo/contexto. É TERMINANTEMENTE PROIBIDO pôr a fonte em dúvida ou escrever qualquer comentário sobre "pesquisa de circulação", "circulação", "comentário secundário moderno", "não fixou testemunho", autenticidade da redação, ou a proveniência da tradução. O solicitante já asseverou a fonte; a nota não litiga isso. Se a pesquisa web trouxer dúvida sobre a redação, IGNORE — não a escreva. Não descreva "efeitos" vagos da passagem ("síntese interpretativa", "horizonte", "no espírito de") — situe concretamente ou omita. NÃO acrescente frase alguma sobre registros bibliográficos, número de volumes, formato ou quais edições existem ("nos registros bibliográficos acessíveis", "aparece como volume único", "edição americana/britânica") — isso não situa a citação e vira afirmação sem fonte; edições, se relevantes, vão SÓ em sources. O corpo termina assim que a citação estiver situada: NÃO acrescente uma frase final de arremate. WHITELIST do corpo: ele só pode conter autor, obra, ano e editora (SOMENTE se estiverem ancorados no CONTEXTO DE PESQUISA/FORNECIDO) e o capítulo/contexto da passagem. É PROIBIDO mencionar edição, reedição, "2ª edição", "nova edição", prefácio, "novo prefácio", reimpressão, tiragem, formato, volume ou ISBN — mesmo que a pesquisa traga esses dados (vão SÓ em sources, e NUNCA como "esta passagem é da Nª edição"). E NUNCA afirme que o CONTEXTO FORNECIDO disse algo que ele não disse: se o contexto só nomeou a obra, é PROIBIDO escrever "no contexto fornecido, ela pertence à Nª edição/ao prefácio/..." ou inventar qualquer detalhe de proveniência.
-- SITUAR, NÃO REAFIRMAR: o corpo SITUA a citação na sua fonte (obra, autor, capítulo, contexto da passagem) e para aí. NÃO reexponha nem reafirme o conteúdo factual da própria citação — as afirmações dentro da citação (fatos históricos, atribuições, datas) são responsabilidade do AUTOR CITADO, já constam no título, e NÃO devem ser reescritas na sua voz como se fossem fatos independentes. Quando precisar mencionar o conteúdo, atribua-o explicitamente ao autor/obra ("Segundo X", "Na passagem, o autor observa que..."), nunca como asserção própria e genérica ("a tradição clássica", "sabe-se que").
-- Atribuição errônea: se a frase circula atribuída a X mas o autor real é Y, o TÍTULO é a frase, o corpo documenta (a) onde circula como "X disse", (b) o autor real Y com fonte, (c) o mecanismo da migração, se identificável. Tags incluem o autor real E o suposto.
-- A citação NÃO vai no corpo (ela é o título, renderizada com CSS de citação). Sem blockquote. Sem "Fonte:" no fim do corpo — fontes ficam só no frontmatter.
-- PT-BR estrito, NUNCA PT-EU: use "você/está/trem/tela/concreto", nunca "tu fazes/estás/comboio/betão/ecrã/facto/reacção/acção/telemóvel".
-- Voz analítica e seca, não panegírica nem condenatória. O corpo é factual: contexto na obra/discurso/carta, formulação original (em itálico se idioma estrangeiro) + tradução PT-BR, e recepção se atestada.
-- NÃO terminar com frase sintetizadora nem aforismo de fechamento ("e assim X nos lembra que...", "no fim, é a ironia que vence"). Termine no fato, no contexto ou na recepção.
-- Distinguir narrador de autor quando aplicável (Brás Cubas ≠ Machado, Álvaro de Campos ≠ Pessoa).
-- Travessão: no máximo 1 por parágrafo; prefira vírgula, parênteses ou dois-pontos. Evite negativas indiretas ("não é incomum que", "não deixa de ser", "não raro") — reescreva em positivo.
-- VOCABULÁRIO BANIDO (não use): essencialmente, notavelmente, é importante notar, vale ressaltar, cabe destacar, nesse sentido, nesse contexto, em última análise, pode-se argumentar que, de certa forma, em muitos aspectos, ademais, outrossim, não obstante, destarte, indubitavelmente, inegavelmente, fascinante, surpreendente, intrigante, magistral, impressionante, extraordinário, genial, brilhante, comovente, tocante, deslumbrante, visionário. Nem "em suma/em resumo/em síntese/concluindo/portanto/enfim" abrindo parágrafo.
+- FONTE FORNECIDA PELO SOLICITANTE: se o CONTEXTO FORNECIDO nomeia uma obra de onde a citação foi extraída, essa obra É a fonte — inclua-a em sources e atribua a passagem a ela. A autoria está estabelecida pela proveniência informada: authorship.verified = true. Só use verified = false quando NÃO houver fonte fornecida E a pesquisa não fixar a autoria.
+- COM FONTE FORNECIDA, o body é CURTO (1–2 frases) e APENAS situa a citação: obra, autor, capítulo/contexto. PROIBIDO pôr a fonte em dúvida ou comentar "pesquisa de circulação", "comentário secundário", "não fixou testemunho", autenticidade da redação ou proveniência da tradução. Se a pesquisa trouxer dúvida, IGNORE.
+- WHITELIST do body: só pode conter autor, obra, ano e editora (SOMENTE se ancorados na pesquisa/contexto) e o capítulo/contexto da passagem. PROIBIDO mencionar edição, reedição, "2ª edição", "novo prefácio", reimpressão, tiragem, formato, volume ou ISBN (isso vai SÓ em sources, nunca como "esta passagem é da Nª edição"). E NUNCA afirme que o CONTEXTO FORNECIDO disse algo que ele não disse. O body termina ao situar a citação — sem frase de arremate.
+- SITUAR, NÃO REAFIRMAR: NÃO reexponha o conteúdo factual da própria citação (fatos, atribuições, datas dentro dela são do AUTOR CITADO e já estão no title). Se mencionar, atribua explicitamente ("Segundo X", "Na passagem, o autor observa que..."), nunca como asserção própria genérica.
+- Atribuição errônea: se a frase circula atribuída a X mas o autor real é Y, o body documenta onde circula como "X disse", o autor real Y com fonte, e o mecanismo da migração se identificável. tags incluem o autor real E o suposto.
+- PT-BR estrito, NUNCA PT-EU (use você/está/trem/tela/concreto; nunca tu fazes/estás/comboio/betão/ecrã/facto/reacção/acção/telemóvel).
+- Voz analítica e seca. NÃO termine com aforismo de fechamento. Travessão: no máximo 1 por parágrafo. Evite negativas indiretas.
+- VOCABULÁRIO BANIDO: essencialmente, notavelmente, é importante notar, vale ressaltar, cabe destacar, nesse sentido, nesse contexto, em última análise, pode-se argumentar que, de certa forma, em muitos aspectos, ademais, outrossim, não obstante, destarte, indubitavelmente, inegavelmente, fascinante, surpreendente, intrigante, magistral, impressionante, extraordinário, genial, brilhante, comovente, tocante, deslumbrante, visionário. Nem "em suma/em resumo/em síntese/concluindo/portanto/enfim" abrindo parágrafo.
 
-FRONTMATTER (YAML, exatamente estes campos, nesta ordem):
-- title: "<a citação completa, sem o nome do autor. Use as aspas duplas do YAML, mas NÃO acrescente aspas literais em volta da citação dentro delas>"
-- date: '<date fornecido pelo usuário, exatamente, entre aspas simples>'
-- category: quote
-- summary: '<~150-200 chars entre aspas SIMPLES: quem disse, onde/quando, e se há controvérsia de atribuição>'
-- tags: ["<autor-real-kebab>", "<tema-kebab>"]   # tag do autor é OBRIGATÓRIA; para misatribuição, incluir suposto e real
-- has_commentary: false
-- sources: lista de fontes efetivamente sustentadas pela pesquisa, cada uma com title, e quando houver author/year/publisher/url, e kind (book|article|wiki|podcast|video|paper|poem|repo|film|other). NÃO fabricar URLs.
+CAMPOS DO JSON:
+- slug: string kebab-case, lowercase, sem acentos, ~50 chars, derivado da citação.
+- title: a citação completa, sem o nome do autor, sem aspas literais em volta.
+- summary: ~150–200 chars situando a citação (quem disse, onde/quando, controvérsia de atribuição se houver).
+- tags: array de 2–4 strings kebab-case; a tag do autor é OBRIGATÓRIA.
+- has_commentary: boolean (false para excerto/contexto factual; true só se houver análise original).
+- sources: array; cada item { title (obrigatório), author?, year? (número), publisher?, url?, kind }. kind ∈ {book, article, wiki, podcast, video, paper, poem, repo, film, other}. NÃO fabricar URLs.
+- body: prosa PT-BR que situa a citação (ver regras acima). NÃO repita a citação aqui.
+- authorship: { verified: boolean, notes: string (motivo curto quando verified=false, senão "") }.
 
-SAÍDA (CRÍTICO — obedeça):
-- NÃO explique, NÃO comente antes nem depois, NÃO use cercas de código.
-- 1ª linha, exatamente: SLUG: <slug em lowercase, sem acentos, hífens no lugar de espaços/pontuação, ~50 chars>
-- 2ª linha, exatamente: AUTHORSHIP: verified   (se há fonte primária)   OU   AUTHORSHIP: unverified — <motivo curto>
-- 3ª linha: em branco.
-- Da 4ª linha em diante: a nota completa, começando em "---" (frontmatter). Nada além da nota.
-- O frontmatter DEVE ser fechado: depois do último campo (sources), uma linha contendo EXATAMENTE "---", uma linha em branco, e então o corpo. Sem esse "---" de fechamento o build quebra.`;
+SAÍDA (CRÍTICO):
+- Responda APENAS com o objeto JSON válido. Sem texto antes/depois, sem cercas de código, sem markdown.`;
 
 function buildUserPrompt(req: QuoteNoteRequest, searchContext: string): string {
   const parts: string[] = [
-    "===== FRASE (vira o título; NÃO repetir no corpo) =====",
+    "===== FRASE (vira o title; NÃO repetir no body) =====",
     req.quote,
     "",
     `===== AUTOR PRESUMIDO ===== ${req.presumedAuthor || "(não informado)"}`,
-    `===== DATE do frontmatter ===== '${req.date}'`,
   ];
   if (req.context && req.context.trim()) {
     parts.push("", "===== CONTEXTO FORNECIDO PELO SOLICITANTE =====", req.context.trim());
@@ -104,7 +94,7 @@ function buildUserPrompt(req: QuoteNoteRequest, searchContext: string): string {
   parts.push(
     "",
     "===== CONTEXTO DE PESQUISA DE AUTORIA (base factual — source-or-silence) =====",
-    searchContext || "(nenhum resultado de pesquisa disponível — se não conhecer fonte primária, marque unverified)",
+    searchContext || "(nenhum resultado — se não conhecer fonte primária, authorship.verified=false)",
   );
   return parts.join("\n");
 }
@@ -135,12 +125,10 @@ async function webSearch(query: string, apiKey: string): Promise<string> {
 }
 
 function buildSearchQuery(req: QuoteNoteRequest): string {
-  // Fonte fornecida pelo solicitante: buscar só dados bibliográficos, não
-  // disputa de autoria (não queremos que o modelo escreva dúvida na nota).
   if (req.context && req.context.trim()) {
     return (
       "Provide only verifiable BIBLIOGRAPHIC details (original title, author, year, " +
-      "publisher, chapter/edition) for the work described here: " +
+      "publisher) for the work described here: " +
       `"${req.context}". Author: ${req.presumedAuthor || "unknown"}. ` +
       "Return concise facts with sources/URLs. Do NOT discuss misattribution or whether " +
       "the wording is authentic — the source is already established by the requester."
@@ -159,16 +147,9 @@ function buildSearchQuery(req: QuoteNoteRequest): string {
 // ---------- Deterministic lexical guard (subset of tests/style/test_lexical.py) ----------
 
 const PT_EU = /(?<![\wÀ-ÿ])(facto|factos|reacção|reacções|acção|acções|comboio|autocarro|telemóvel|rapariga|raparigas|estás|tu fazes|tu vais|tu és|ecrã|betão)(?![\wÀ-ÿ])/i;
-const BANNED_VOCAB = /(?<![\wÀ-ÿ])(essencialmente|notavelmente|é importante notar|vale ressaltar|cabe destacar|nesse sentido|nesse contexto|em última análise|pode-se argumentar que|de certa forma|em muitos aspectos|ademais|outrossim|não obstante|destarte|indubitavelmente|inegavelmente|fascinante|surpreendente|intrigante|magistral|impressionante|extraordinário|genial|brilhante|comovente|deslumbrante|visionário)(?![\wÀ-ÿ])/i;
+const BANNED_VOCAB = /(?<![\wÀ-ÿ])(essencialmente|notavelmente|é importante notar|vale ressaltar|cabe destacar|nesse sentido|em última análise|pode-se argumentar que|de certa forma|em muitos aspectos|ademais|outrossim|não obstante|destarte|indubitavelmente|inegavelmente|fascinante|surpreendente|intrigante|magistral|impressionante|extraordinário|genial|brilhante|comovente|deslumbrante|visionário)(?![\wÀ-ÿ])/i;
 
-// Strip frontmatter so we only lint the prose body.
-function noteBody(note: string): string {
-  const m = note.match(/^---\n[\s\S]*?\n---\n([\s\S]*)$/);
-  return m ? m[1] : note;
-}
-
-function lexicalCheck(note: string): string[] {
-  const body = noteBody(note);
+function lexicalCheck(body: string): string[] {
   const hits: string[] = [];
   const eu = body.match(PT_EU);
   if (eu) hits.push(`PT-EU: "${eu[0]}" (use PT-BR)`);
@@ -177,101 +158,86 @@ function lexicalCheck(note: string): string[] {
   return hits;
 }
 
-// ---------- Parse + validate the SLUG/AUTHORSHIP/note contract ----------
-
-interface ParsedQuote {
-  slug: string;
-  note: string;
-  authorship: { verified: boolean; notes: string };
-}
+// ---------- Parse + validate the JSON contract ----------
 
 function normalizeSlug(raw: string): string {
-  return raw
+  return String(raw || "")
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
 }
 
-// O modelo às vezes omite o `---` de fechamento do frontmatter, o que quebra o
-// build do Hugo ("EOF looking for end YAML front matter delimiter"). Insere-o
-// deterministicamente antes do corpo.
-function ensureFrontmatterClosed(note: string): string {
-  const lines = note.split("\n");
-  if (lines[0].trim() !== "---") return note;
-  // Já fechado? (existe um segundo `---` isolado após a abertura)
-  for (let i = 1; i < lines.length; i++) {
-    if (lines[i].trim() === "---") return note;
+type ParsedFields = Omit<QuoteNoteResult, "lexicalWarnings" | "model" | "usage">;
+
+function parseFields(raw: string): ParsedFields {
+  let text = raw.trim();
+  // Strip code fences if the model wrapped the JSON.
+  text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  // Fallback: extract the outermost JSON object.
+  if (!text.startsWith("{")) {
+    const m = text.match(/\{[\s\S]*\}/);
+    if (m) text = m[0];
   }
-  // Acha o início do corpo: primeira linha de prosa após os campos do
-  // frontmatter (não é `key:`, nem item de lista, nem continuação indentada).
-  let bodyStart = -1;
-  for (let i = 1; i < lines.length; i++) {
-    const l = lines[i];
-    if (l.trim() === "") continue;
-    const isFm = /^[A-Za-z_][\w-]*\s*:/.test(l) || /^\s*-\s/.test(l) || /^\s+\S/.test(l);
-    if (!isFm) {
-      bodyStart = i;
-      break;
-    }
+
+  let obj: Record<string, unknown>;
+  try {
+    obj = JSON.parse(text);
+  } catch (e) {
+    throw new Error(`JSON inválido: ${e instanceof Error ? e.message : String(e)}`);
   }
-  if (bodyStart < 0) return note.replace(/\s*$/, "\n---\n");
-  let fmEnd = bodyStart - 1;
-  while (fmEnd > 0 && lines[fmEnd].trim() === "") fmEnd--;
-  lines.splice(fmEnd + 1, 0, "---");
-  return lines.join("\n");
-}
-
-function parseQuoteResponse(rawIn: string): ParsedQuote {
-  const raw = rawIn.trim();
-
-  const slugMatch = raw.match(/^SLUG:\s*(.+)$/im);
-  if (!slugMatch) throw new Error("saída sem linha 'SLUG: ...'");
-  const slug = normalizeSlug(slugMatch[1].trim());
-  if (!slug) throw new Error("slug vazio após normalização");
-
-  const authMatch = raw.match(/^AUTHORSHIP:\s*(verified|unverified)\s*(?:—|-{1,2})?\s*(.*)$/im);
-  if (!authMatch) throw new Error("saída sem linha 'AUTHORSHIP: verified|unverified'");
-  const authorship = {
-    verified: authMatch[1].toLowerCase() === "verified",
-    notes: (authMatch[2] || "").trim(),
-  };
-
-  const fmStart = raw.indexOf("\n---");
-  const firstDash = raw.trimStart().startsWith("---") ? raw.indexOf("---") : fmStart >= 0 ? fmStart + 1 : -1;
-  if (firstDash < 0) throw new Error("saída sem frontmatter começando em '---'");
-
-  let note = raw.slice(firstDash).trim();
-  note = note.replace(/^```[a-z]*\n/, "").replace(/\n```$/, "").trim() + "\n";
-
-  // O modelo às vezes envolve a citação em aspas literais dentro do title
-  // (`title: "\"...\""`). Remove-as deterministicamente.
-  note = note.replace(/^title:\s*"\\"(.*)\\""\s*$/m, 'title: "$1"');
-
-  // Convenção Scholion: summary entre aspas SIMPLES (YAML). Requote quando o
-  // modelo usa aspas duplas.
-  note = note.replace(/^summary:\s*"(.*)"\s*$/m, (_all, v: string) =>
-    `summary: '${v.replace(/\\"/g, '"').replace(/'/g, "''")}'`,
-  );
-
-  // Fecha o frontmatter se o modelo omitiu o `---` de fechamento.
-  note = ensureFrontmatterClosed(note);
 
   const errs: string[] = [];
-  if (!note.startsWith("---")) errs.push("não começa com frontmatter");
-  if (!/^---\r?\n[\s\S]*?\r?\n---\s*\r?\n/.test(note)) errs.push("frontmatter sem '---' de fechamento");
-  if (!/^category:\s*quote\s*$/m.test(note)) errs.push("frontmatter sem 'category: quote'");
-  if (!/^title:\s*"/m.test(note)) errs.push("sem title entre aspas duplas");
-  if (!/^date:\s*'/m.test(note)) errs.push("sem date entre aspas simples");
-  if (!/^summary:\s*'/m.test(note)) errs.push("summary sem aspas simples");
-  if (!/^tags:\s*\[.+\]/m.test(note)) errs.push("sem tags (com ao menos a tag do autor)");
-  if (!/^has_commentary:\s*(true|false)\s*$/m.test(note)) errs.push("sem has_commentary");
-  if (!/^sources:\s*$/m.test(note)) errs.push("sem bloco sources");
+  const slug = normalizeSlug(obj.slug as string);
+  const title = typeof obj.title === "string" ? obj.title.trim() : "";
+  const summary = typeof obj.summary === "string" ? obj.summary.trim() : "";
+  const body = typeof obj.body === "string" ? obj.body.trim() : "";
+  const tags = Array.isArray(obj.tags) ? (obj.tags as unknown[]).map(String).filter(Boolean) : [];
+  const has_commentary = obj.has_commentary === true;
+  const rawSources = Array.isArray(obj.sources) ? (obj.sources as Record<string, unknown>[]) : [];
+  const auth = (obj.authorship ?? {}) as Record<string, unknown>;
+
+  if (!slug) errs.push("slug ausente/vazio");
+  if (!title) errs.push("title ausente");
+  if (!summary) errs.push("summary ausente");
+  if (!body) errs.push("body ausente");
+  if (tags.length === 0) errs.push("tags vazias (ao menos a tag do autor)");
+  if (rawSources.length === 0) errs.push("sources vazio");
+  if (typeof auth.verified !== "boolean") errs.push("authorship.verified ausente");
+
+  const sources: QuoteSource[] = rawSources
+    .map((s) => {
+      const src: QuoteSource = {
+        title: typeof s.title === "string" ? s.title.trim() : "",
+        kind: typeof s.kind === "string" && s.kind.trim() ? s.kind.trim() : "other",
+      };
+      if (typeof s.author === "string" && s.author.trim()) src.author = s.author.trim();
+      if (typeof s.publisher === "string" && s.publisher.trim()) src.publisher = s.publisher.trim();
+      if (typeof s.url === "string" && s.url.trim()) src.url = s.url.trim();
+      const yr = typeof s.year === "number" ? s.year : parseInt(String(s.year ?? ""), 10);
+      if (!Number.isNaN(yr) && yr > 0) src.year = yr;
+      return src;
+    })
+    .filter((s) => s.title);
+
+  if (sources.length === 0) errs.push("nenhuma source com title");
   if (errs.length) throw new Error("validação falhou: " + errs.join("; "));
 
-  return { slug, note, authorship };
+  return {
+    slug,
+    title,
+    summary,
+    tags,
+    has_commentary,
+    sources,
+    body,
+    authorship: {
+      verified: auth.verified === true,
+      notes: typeof auth.notes === "string" ? auth.notes.trim() : "",
+    },
+  };
 }
 
 export async function handleQuoteNote(
@@ -279,7 +245,7 @@ export async function handleQuoteNote(
   factory: ProviderFactory,
   config: Config,
 ): Promise<QuoteNoteResult> {
-  // 1. Research authorship (best-effort — compose even if search is unavailable).
+  // 1. Research authorship (best-effort).
   let searchContext = "";
   if (config.openrouterApiKey) {
     try {
@@ -301,49 +267,31 @@ export async function handleQuoteNote(
     modelChain,
   );
 
-  let parsed: ParsedQuote;
+  let fields: ParsedFields;
   let model = result.model;
   let usage = result.usage;
 
-  // Combine contract parse + lexical guard into one validation, so a single
-  // repair round-trip fixes both classes of problem.
-  function validate(content: string): { parsed: ParsedQuote; lexical: string[] } {
-    const p = parseQuoteResponse(content);
-    const lexical = lexicalCheck(p.note);
-    if (lexical.length) throw new Error("guarda lexical: " + lexical.join("; "));
-    return { parsed: p, lexical };
-  }
-
-  let lexicalWarnings: string[] = [];
   try {
-    const ok = validate(result.content);
-    parsed = ok.parsed;
-    lexicalWarnings = ok.lexical;
+    fields = parseFields(result.content);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    console.log(
-      `[quote-note] parse/lint falhou (${reason}); head: ${JSON.stringify(result.content.slice(0, 300))}`,
-    );
+    console.log(`[quote-note] parse falhou (${reason}); head: ${JSON.stringify(result.content.slice(0, 300))}`);
     const repairMessages: ChatMessage[] = [
       ...messages,
       { role: "assistant", content: result.content },
       {
         role: "user",
         content:
-          `Sua resposta anterior violou o contrato de saída (${reason}). ` +
-          "Responda novamente APENAS com: linha 1 'SLUG: ...', linha 2 'AUTHORSHIP: verified|unverified — ...', " +
-          "linha 3 em branco, e a nota completa a partir do '---'. Sem cercas de código, sem comentários, " +
-          "e sem os termos PT-EU / do vocabulário banido apontados.",
+          `Sua resposta anterior não é um JSON válido no contrato (${reason}). ` +
+          "Responda novamente APENAS com o objeto JSON, com todos os campos exigidos, " +
+          "sem texto fora do JSON e sem cercas de código.",
       },
     ];
     const retry = await factory.completeWithFallback(
       { model: "", messages: repairMessages, maxTokens: config.maxOutputTokens, temperature: 0 },
       modelChain,
     );
-    // On the repair pass, accept the contract even if lexical hits survive —
-    // surface them as warnings; the caller's ghost-audit is the hard gate.
-    parsed = parseQuoteResponse(retry.content);
-    lexicalWarnings = lexicalCheck(parsed.note);
+    fields = parseFields(retry.content);
     model = retry.model;
     usage =
       retry.usage && result.usage
@@ -355,10 +303,8 @@ export async function handleQuoteNote(
   }
 
   return {
-    slug: parsed.slug,
-    note: parsed.note,
-    authorship: parsed.authorship,
-    lexicalWarnings,
+    ...fields,
+    lexicalWarnings: lexicalCheck(fields.body),
     model,
     usage: usage
       ? {
