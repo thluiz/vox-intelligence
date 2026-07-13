@@ -87,7 +87,8 @@ SAÍDA (CRÍTICO — obedeça):
 - 1ª linha, exatamente: SLUG: <slug em lowercase, sem acentos, hífens no lugar de espaços/pontuação, ~50 chars>
 - 2ª linha, exatamente: AUTHORSHIP: verified   (se há fonte primária)   OU   AUTHORSHIP: unverified — <motivo curto>
 - 3ª linha: em branco.
-- Da 4ª linha em diante: a nota completa, começando em "---" (frontmatter). Nada além da nota.`;
+- Da 4ª linha em diante: a nota completa, começando em "---" (frontmatter). Nada além da nota.
+- O frontmatter DEVE ser fechado: depois do último campo (sources), uma linha contendo EXATAMENTE "---", uma linha em branco, e então o corpo. Sem esse "---" de fechamento o build quebra.`;
 
 function buildUserPrompt(req: QuoteNoteRequest, searchContext: string): string {
   const parts: string[] = [
@@ -194,6 +195,35 @@ function normalizeSlug(raw: string): string {
     .slice(0, 60);
 }
 
+// O modelo às vezes omite o `---` de fechamento do frontmatter, o que quebra o
+// build do Hugo ("EOF looking for end YAML front matter delimiter"). Insere-o
+// deterministicamente antes do corpo.
+function ensureFrontmatterClosed(note: string): string {
+  const lines = note.split("\n");
+  if (lines[0].trim() !== "---") return note;
+  // Já fechado? (existe um segundo `---` isolado após a abertura)
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() === "---") return note;
+  }
+  // Acha o início do corpo: primeira linha de prosa após os campos do
+  // frontmatter (não é `key:`, nem item de lista, nem continuação indentada).
+  let bodyStart = -1;
+  for (let i = 1; i < lines.length; i++) {
+    const l = lines[i];
+    if (l.trim() === "") continue;
+    const isFm = /^[A-Za-z_][\w-]*\s*:/.test(l) || /^\s*-\s/.test(l) || /^\s+\S/.test(l);
+    if (!isFm) {
+      bodyStart = i;
+      break;
+    }
+  }
+  if (bodyStart < 0) return note.replace(/\s*$/, "\n---\n");
+  let fmEnd = bodyStart - 1;
+  while (fmEnd > 0 && lines[fmEnd].trim() === "") fmEnd--;
+  lines.splice(fmEnd + 1, 0, "---");
+  return lines.join("\n");
+}
+
 function parseQuoteResponse(rawIn: string): ParsedQuote {
   const raw = rawIn.trim();
 
@@ -226,8 +256,12 @@ function parseQuoteResponse(rawIn: string): ParsedQuote {
     `summary: '${v.replace(/\\"/g, '"').replace(/'/g, "''")}'`,
   );
 
+  // Fecha o frontmatter se o modelo omitiu o `---` de fechamento.
+  note = ensureFrontmatterClosed(note);
+
   const errs: string[] = [];
   if (!note.startsWith("---")) errs.push("não começa com frontmatter");
+  if (!/^---\r?\n[\s\S]*?\r?\n---\s*\r?\n/.test(note)) errs.push("frontmatter sem '---' de fechamento");
   if (!/^category:\s*quote\s*$/m.test(note)) errs.push("frontmatter sem 'category: quote'");
   if (!/^title:\s*"/m.test(note)) errs.push("sem title entre aspas duplas");
   if (!/^date:\s*'/m.test(note)) errs.push("sem date entre aspas simples");
