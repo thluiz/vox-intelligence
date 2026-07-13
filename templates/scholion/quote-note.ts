@@ -61,7 +61,8 @@ const SYSTEM_PROMPT = `Você redige UMA nota de citação verificada para o Scho
 
 REGRAS INEGOCIÁVEIS:
 - Source-or-silence: NUNCA invente atribuição, obra, data ou fonte. Só afirme o que o CONTEXTO DE PESQUISA ou o CONTEXTO FORNECIDO sustentam.
-- FONTE FORNECIDA PELO SOLICITANTE: se o CONTEXTO FORNECIDO nomeia uma obra (livro, ensaio, discurso) de onde a citação foi extraída, essa obra É a fonte — registre-a em sources e atribua a passagem a ela. Nesse caso a autoria está estabelecida pela própria proveniência informada: marque AUTHORSHIP: verified (a pesquisa web só enriquece os dados bibliográficos: ano, editora, capítulo). Só marque AUTHORSHIP: unverified quando NÃO houver fonte fornecida E a pesquisa não fixar a autoria.
+- FONTE FORNECIDA PELO SOLICITANTE: se o CONTEXTO FORNECIDO nomeia uma obra (livro, ensaio, discurso) de onde a citação foi extraída, essa obra É a fonte — registre-a em sources e atribua a passagem a ela. Nesse caso a autoria está estabelecida pela própria proveniência informada: marque AUTHORSHIP: verified. Só marque AUTHORSHIP: unverified quando NÃO houver fonte fornecida E a pesquisa não fixar a autoria.
+- COM FONTE FORNECIDA, o corpo é CURTO (1–2 frases) e APENAS situa a citação: obra, autor, capítulo/contexto. É TERMINANTEMENTE PROIBIDO pôr a fonte em dúvida ou escrever qualquer comentário sobre "pesquisa de circulação", "circulação", "comentário secundário moderno", "não fixou testemunho", autenticidade da redação, ou a proveniência da tradução. O solicitante já asseverou a fonte; a nota não litiga isso. Se a pesquisa web trouxer dúvida sobre a redação, IGNORE — não a escreva. Não descreva "efeitos" vagos da passagem ("síntese interpretativa", "horizonte", "no espírito de") — situe concretamente ou omita.
 - SITUAR, NÃO REAFIRMAR: o corpo SITUA a citação na sua fonte (obra, autor, capítulo, contexto da passagem) e para aí. NÃO reexponha nem reafirme o conteúdo factual da própria citação — as afirmações dentro da citação (fatos históricos, atribuições, datas) são responsabilidade do AUTOR CITADO, já constam no título, e NÃO devem ser reescritas na sua voz como se fossem fatos independentes. Quando precisar mencionar o conteúdo, atribua-o explicitamente ao autor/obra ("Segundo X", "Na passagem, o autor observa que..."), nunca como asserção própria e genérica ("a tradição clássica", "sabe-se que").
 - Atribuição errônea: se a frase circula atribuída a X mas o autor real é Y, o TÍTULO é a frase, o corpo documenta (a) onde circula como "X disse", (b) o autor real Y com fonte, (c) o mecanismo da migração, se identificável. Tags incluem o autor real E o suposto.
 - A citação NÃO vai no corpo (ela é o título, renderizada com CSS de citação). Sem blockquote. Sem "Fonte:" no fim do corpo — fontes ficam só no frontmatter.
@@ -73,7 +74,7 @@ REGRAS INEGOCIÁVEIS:
 - VOCABULÁRIO BANIDO (não use): essencialmente, notavelmente, é importante notar, vale ressaltar, cabe destacar, nesse sentido, nesse contexto, em última análise, pode-se argumentar que, de certa forma, em muitos aspectos, ademais, outrossim, não obstante, destarte, indubitavelmente, inegavelmente, fascinante, surpreendente, intrigante, magistral, impressionante, extraordinário, genial, brilhante, comovente, tocante, deslumbrante, visionário. Nem "em suma/em resumo/em síntese/concluindo/portanto/enfim" abrindo parágrafo.
 
 FRONTMATTER (YAML, exatamente estes campos, nesta ordem):
-- title: "<a citação completa, sem o nome do autor, entre aspas duplas>"
+- title: "<a citação completa, sem o nome do autor. Use as aspas duplas do YAML, mas NÃO acrescente aspas literais em volta da citação dentro delas>"
 - date: '<date fornecido pelo usuário, exatamente, entre aspas simples>'
 - category: quote
 - summary: '<~150-200 chars entre aspas SIMPLES: quem disse, onde/quando, e se há controvérsia de atribuição>'
@@ -133,6 +134,17 @@ async function webSearch(query: string, apiKey: string): Promise<string> {
 }
 
 function buildSearchQuery(req: QuoteNoteRequest): string {
+  // Fonte fornecida pelo solicitante: buscar só dados bibliográficos, não
+  // disputa de autoria (não queremos que o modelo escreva dúvida na nota).
+  if (req.context && req.context.trim()) {
+    return (
+      "Provide only verifiable BIBLIOGRAPHIC details (original title, author, year, " +
+      "publisher, chapter/edition) for the work described here: " +
+      `"${req.context}". Author: ${req.presumedAuthor || "unknown"}. ` +
+      "Return concise facts with sources/URLs. Do NOT discuss misattribution or whether " +
+      "the wording is authentic — the source is already established by the requester."
+    );
+  }
   const presumed = req.presumedAuthor ? ` It is often attributed to ${req.presumedAuthor}.` : "";
   return (
     `Who originally said or wrote the quote: "${req.quote}"?${presumed} ` +
@@ -203,6 +215,10 @@ function parseQuoteResponse(rawIn: string): ParsedQuote {
 
   let note = raw.slice(firstDash).trim();
   note = note.replace(/^```[a-z]*\n/, "").replace(/\n```$/, "").trim() + "\n";
+
+  // O modelo às vezes envolve a citação em aspas literais dentro do title
+  // (`title: "\"...\""`). Remove-as deterministicamente.
+  note = note.replace(/^title:\s*"\\"(.*)\\""\s*$/m, 'title: "$1"');
 
   // Convenção Scholion: summary entre aspas SIMPLES (YAML). Requote quando o
   // modelo usa aspas duplas.
