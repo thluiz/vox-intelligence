@@ -1,0 +1,16 @@
+[Unit]
+Description=vox-intelligence AI Gateway
+After=network.target
+
+[Service]
+Type=simple
+User=hermes
+Group=hermes
+WorkingDirectory=/home/hermes/services/vox-intelligence
+Environment=PATH=/home/hermes/.bun/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/hermes/.bun/bin/bun run server.ts
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
