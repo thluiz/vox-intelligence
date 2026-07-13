@@ -356,9 +356,6 @@ const server = Bun.serve({
         if (!body.quote || typeof body.quote !== "string") {
           return errorResponse("Missing required field: quote");
         }
-        if (!body.date || typeof body.date !== "string") {
-          return errorResponse("Missing required field: date (ISO 8601 + offset, caller's clock)");
-        }
         const sizeError = validateInputSize(String(body.quote), String(body.context || "").length);
         if (sizeError) return errorResponse(sizeError, 413);
         const result = await handleQuoteNote(body as any, factory, config);
