@@ -2,6 +2,24 @@
 
 All notable changes to vox-intelligence are documented in this file.
 
+## [0.5.1] — 2026-07-15
+
+### Suggest-annotations: atenção a ideias inusitadas + até 25 notas
+
+- **Novo critério 7 (ideias inusitadas / fora do tradicional)** em `POST /presets/podcast/suggest-annotations` — reframings originais, imagens conceituais vívidas/metáforas, provocações contra-intuitivas e formulações idiossincráticas do orador. Mapeado no tier `reflection` (PT + EN)
+- **Regra de reserva** — 2–4 sugestões deliberadamente reservadas às ideias mais originais do episódio, para não encher a lista só com os beats óbvios/centrais
+- **Cap 8–20 → 8–25** sugestões
+- **`temperature` 0.3 → 0.5** no suggest — afrouxa o viés pró-óbvio sem virar extrapolação
+
+## [0.5.0] — 2026-07-13
+
+### Presets Scholion: etymology-note e quote-note
+
+- **`POST /presets/scholion/etymology-note`** — preset para o pipeline de radicais/etimologia de ideogramas. Default `gpt-5.4` (deepseek alucinava glosas/atribuições). Regras anti-fabricação do triage do source-audit: tons, cross-fonte, convergência, segmentação e IDs verbatim; atribuição por seção do dump (CUHK vs xiaoxue); sentinela 99999 do hanziyuan; sem inferência fonológica própria nas Divergências
+- **`POST /presets/scholion/quote-note`** — síntese de nota de citação (Scholion), devolve **JSON estruturado** (só composição, sem markdown). **Modo livro** (detecta origem de livro e aperta o corpo). Com fonte fornecida, trata-a como A fonte (situar, não relitigar proveniência); proíbe frase-lixo de registros bibliográficos/edições no fecho e falsa atribuição ao contexto; garante fechamento `---` do frontmatter (build Hugo)
+- **MCP** — `quote_note` exposto como tool MCP; registro dos MCP servers versionado (`.mcp.json`)
+- **Deploy** — systemd unit versionada + docs de setup do host
+
 ## [0.4.0] — 2026-07-06
 
 ### Ghost-audit hardening
