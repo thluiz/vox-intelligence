@@ -42,7 +42,7 @@ export interface SuggestAnnotationsResult {
 
 const PRESET_MODELS = ["openrouter/google/gemini-2.5-flash"];
 
-const SYSTEM_PROMPT_PT = `Você é um analista editorial de podcasts. Recebe o transcript completo de um episódio e deve identificar 8–20 momentos dignos de anotação permanente.
+const SYSTEM_PROMPT_PT = `Você é um analista editorial de podcasts. Recebe o transcript completo de um episódio e deve identificar 8–25 momentos dignos de anotação permanente.
 
 ## Critérios de selecção (pelo menos um deve ser satisfeito)
 1. **Dados concretos surpreendentes** — estatísticas, números, factos verificáveis que causam impacto
@@ -51,11 +51,12 @@ const SYSTEM_PROMPT_PT = `Você é um analista editorial de podcasts. Recebe o t
 4. **Revelações ou denúncias** — informação nova, exclusiva ou contra-intuitiva
 5. **Conexões não-óbvias** — quando o orador liga dois temas aparentemente desconectados
 6. **Momentos de reflexão para posteridade** — passagens com relevância além do contexto imediato
+7. **Ideias inusitadas ou fora do tradicional** — reframings originais, imagens conceituais vívidas ou metáforas que iluminam algo comum de forma nova, provocações contra-intuitivas, formulações idiossincráticas do orador (ex.: reduzir uma ideia grandiosa a um detalhe prosaico — "um Deus que cria o universo e te dá um carro"). Priorizar o que é memorável por ser INESPERADO, não só por ser importante.
 
 ## Tiers
 - "concept" — critérios 2 e 5 (conceitos, frameworks, conexões)
 - "data" — critérios 1 e 4 (dados, revelações, factos)
-- "reflection" — critérios 3 e 6 (declarações de impacto, reflexões)
+- "reflection" — critérios 3, 6 e 7 (declarações de impacto, reflexões, ideias inusitadas)
 
 ## O que NÃO anotar
 - Intros, merchandising, despedidas, chamadas à acção
@@ -69,7 +70,8 @@ Se o episódio já tem anotações, indicar sobreposições (threshold: 30 segun
 
 ## Regras
 - Basear TUDO exclusivamente no transcript fornecido. Nunca inventar ou extrapolar
-- Ser selectivo: qualidade sobre quantidade (8–20 sugestões)
+- Ser selectivo: qualidade sobre quantidade (8–25 sugestões)
+- Reservar deliberadamente 2–4 das sugestões para as ideias MAIS inusitadas/originais do episódio (critério 7), mesmo que não sejam o tema central. Não encher a lista só com os beats principais e óbvios.
 - O campo "description" deve ser uma explicação editorial curta (1-2 frases) de por que este momento é relevante
 - O campo "quote" deve conter uma citação directa ou paráfrase fiel do transcript (1-2 frases)
 - O campo "criterion" deve indicar qual critério (1-6) a sugestão satisfaz
@@ -91,7 +93,7 @@ Se o episódio já tem anotações, indicar sobreposições (threshold: 30 segun
   ]
 }`;
 
-const SYSTEM_PROMPT_EN = `You are a podcast editorial analyst. You receive the full transcript of an episode and must identify 8–20 moments worthy of permanent annotation.
+const SYSTEM_PROMPT_EN = `You are a podcast editorial analyst. You receive the full transcript of an episode and must identify 8–25 moments worthy of permanent annotation.
 
 ## Selection criteria (at least one must be satisfied)
 1. **Surprising concrete data** — statistics, numbers, verifiable facts that make an impact
@@ -100,11 +102,12 @@ const SYSTEM_PROMPT_EN = `You are a podcast editorial analyst. You receive the f
 4. **Revelations or exposés** — new, exclusive, or counter-intuitive information
 5. **Non-obvious connections** — when the speaker links two seemingly unrelated topics
 6. **Moments of reflection for posterity** — passages with relevance beyond the immediate context
+7. **Unusual or non-traditional ideas** — original reframings, vivid conceptual images or metaphors that cast something ordinary in a new light, counter-intuitive provocations, idiosyncratic formulations by the speaker (e.g. reducing a grand idea to a prosaic detail — "a God who creates the universe and gives you a car"). Prioritize what is memorable for being UNEXPECTED, not only for being important.
 
 ## Tiers
 - "concept" — criteria 2 and 5 (concepts, frameworks, connections)
 - "data" — criteria 1 and 4 (data, revelations, facts)
-- "reflection" — criteria 3 and 6 (impact statements, reflections)
+- "reflection" — criteria 3, 6 and 7 (impact statements, reflections, unusual ideas)
 
 ## What NOT to annotate
 - Intros, merchandising, goodbyes, calls to action
@@ -118,7 +121,8 @@ If the episode already has annotations, flag overlaps (threshold: 30 seconds) in
 
 ## Rules
 - Base EVERYTHING exclusively on the provided transcript. Never invent or extrapolate
-- Be selective: quality over quantity (8–20 suggestions)
+- Be selective: quality over quantity (8–25 suggestions)
+- Deliberately reserve 2–4 of the suggestions for the MOST unusual/original ideas in the episode (criterion 7), even if they are not the central topic. Do not fill the list only with the main, obvious beats.
 - The "description" field must be a short editorial explanation (1-2 sentences) of why this moment matters
 - The "quote" field must contain a direct quote or faithful paraphrase from the transcript (1-2 sentences)
 - The "criterion" field must indicate which criterion (1-6) the suggestion satisfies
@@ -233,7 +237,7 @@ export async function handleSuggestAnnotations(
       model: "",
       messages,
       maxTokens: config.maxOutputTokens,
-      temperature: 0.3,
+      temperature: 0.5,
     },
     modelChain,
   );
