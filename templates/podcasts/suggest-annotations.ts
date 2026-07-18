@@ -40,7 +40,7 @@ export interface SuggestAnnotationsResult {
   };
 }
 
-const PRESET_MODELS = ["openrouter/google/gemini-2.5-flash"];
+const PRESET_MODELS = ["openrouter/openai/gpt-5.2", "openrouter/google/gemini-2.5-flash"];
 
 const SYSTEM_PROMPT_PT = `Você é um analista editorial de podcasts. Recebe o transcript completo de um episódio e deve identificar 8–25 momentos dignos de anotação permanente.
 
