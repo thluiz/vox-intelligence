@@ -12,4 +12,4 @@ sources:
 
 Poderia ter deixado o treino de lado naquele mês. Fez o oposto. Treinou dobrado.
 
-O método não está nas palavras — está em quem deriva. No fim, tudo se resume a isso: o fluxo está no método de quem deriva, não nas palavras.
+O método não está nas palavras. Está em quem deriva. No fim, tudo se resume a isso: o fluxo está no método de quem deriva, não nas palavras.

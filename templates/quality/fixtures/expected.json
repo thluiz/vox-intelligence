@@ -10,9 +10,13 @@
     "mustIncludeAnyRule": [
       "FECHO_AFORISTICO",
       "TAGLINE_REDUNDANTE",
-      "TRES_BATIDAS",
-      "TRAVESSAO_DE_EFEITO"
+      "TRES_BATIDAS"
     ]
+  },
+  {
+    "file": "red-travessao-prose.md",
+    "verdict": ["red"],
+    "mustIncludeRules": ["TRAVESSAO_DE_EFEITO"]
   },
   {
     "file": "green-clean.md",

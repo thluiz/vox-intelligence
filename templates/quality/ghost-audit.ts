@@ -70,7 +70,7 @@ NÃO duplique o /style-test (que já pega, por regex: PT-EU, vocabulário banido
 6. FALSA_EXPERIENCIA — simula vivência do autor em primeira pessoa que ele não relatou ("já vi", "lembro de quando", cena pessoal inventada). Em nota factual/erudita, qualquer "eu vivi" sem fonte é suspeito.
 7. META_NARRACAO — anuncia a estrutura em vez de entregá-la: "em três movimentos", "um caso vale por todos", "o ponto é paradoxal", "vale notar".
 8. MOLDURA_NARRADOR — fechamento tipo redação: "X propõe A; Y mostra B", narrador resumindo quem disse o quê.
-9. TRAVESSAO_DE_EFEITO — travessão (ou traço/hífen/dois-pontos) usado como pausa dramática setup→punch, removível por ponto final sem perder sentido. Só é aceitável o inciso genuíno que, removido, quebra a gramática.
+9. TRAVESSAO_DE_EFEITO — travessão (—), traço (–), hífen ou dois-pontos usado em PROSA CORRENTE como pausa dramática (setup→punch) ou como inciso removível: se a frase segue gramatical ao trocar o travessão por ponto final, ou ao apagar o trecho entre dois travessões, é violação. Só escapa o inciso genuíno cuja remoção quebra a gramática. severity "block": este autor não usa travessão de efeito, então qualquer travessão de efeito em prosa reprova a nota (red). NÃO reporte travessões que estejam (a) em títulos de fonte no frontmatter, (b) dentro de bloco de citação (>) ou de código reproduzindo dado/marcador/saída de verbete, (c) em glosas, listas de acepção, tabelas de formas ou blocos de fonologia de ficha de caractere — esses não são prosa autoral.
 10. EDITORIALIZACAO — narrar o efeito da história ("a gente sente o peso", "isso muda tudo") em vez de deixar o leitor sentir.
 11. EFEITO_ABSTRATO — "colocações relevantes", "contribuição importante" em vez do conteúdo concreto do que foi dito/feito.
 12. SOURCE_OR_SILENCE — afirmação factual (etimologia, datação, atribuição, citação, glosa, número) apresentada como fato assentado, SEM fonte inline, SEM cobertura no bloco sources do frontmatter, E SEM link para outra nota. Severity "block". DUAS EXCEÇÕES que NÃO são violação, não marque: (a) afirmação conectiva ancorada por link para outra nota Scholion — wikilink [[slug]] / [[slug|texto]] OU markdown [texto](/notes/slug) — conta como fonte: a citação vive na nota linkada, que você não vê aqui. (b) em doc de pesquisa, item marcado com ⚠ é provisório-reconhecido pelo autor (a marca já declara "fonte ainda não verificada"). Só é violação a afirmação dada como fato verificado, sem ⚠, sem fonte e sem link.
@@ -84,14 +84,16 @@ NÃO duplique o /style-test (que já pega, por regex: PT-EU, vocabulário banido
 
 ## Sensibilidade a categoria
 
-Leia o frontmatter. Se \`category: etymology\` ou \`category: disciple\` (notas de referência filológica): travessões em glosas de dicionário, listas de acepções, tabelas de formas e blocos de fonologia NÃO são efeito retórico — não reporte TRAVESSAO_DE_EFEITO nem PARALELISMO_MECANICO sobre essa estrutura de verbete. Os demais testes aplicam normalmente à prosa da nota.
+Leia o frontmatter. Se \`category: etymology\` ou \`category: disciple\` (notas de referência filológica), o abatimento vale APENAS para a estrutura de verbete: glosas de dicionário, listas de acepções, tabelas de formas, blocos de fonologia. Sobre ESSA estrutura, não reporte TRAVESSAO_DE_EFEITO nem PARALELISMO_MECANICO.
+
+O abatimento NÃO se estende à prosa. Todo parágrafo de prosa corrente do corpo recebe escrutínio completo, incluindo TRAVESSAO_DE_EFEITO, mesmo numa nota \`category: etymology\`. Uma nota \`category: etymology\` que na verdade é ensaio/prosa metodológica (não uma ficha de caractere) não recebe abatimento nenhum: trate-a como prosa comum. Na dúvida entre verbete e prosa, trate como prosa e reporte.
 
 ## Regras de saída
 
 - Cite SEMPRE o trecho verbatim (campo "quote") para o chamador localizar. Copie o trecho EXATAMENTE como está na nota, sem parafrasear nem corrigir.
 - "suggestion" deve ser uma reescrita cirúrgica POSITIVA em PT-BR, ou instrução clara de corte. Não reescreva a nota inteira.
 - Não invente violação para parecer rigoroso. Se o parágrafo está limpo, não reporte nada dele. Um relatório honesto pode vir vazio.
-- SOURCE_OR_SILENCE e PT_EU são sempre severity "block". Os demais geralmente "warn" (o autor decide), salvo flagrante.
+- SOURCE_OR_SILENCE, PT_EU e TRAVESSAO_DE_EFEITO (em prosa corrente) são sempre severity "block". Os demais geralmente "warn" (o autor decide), salvo flagrante.
 - verdict: "red" se houver QUALQUER finding "block"; "yellow" se só houver "warn"; "green" se findings vazio.
 
 Responda APENAS com JSON válido, sem cercas de código, neste formato:
