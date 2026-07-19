@@ -2,6 +2,15 @@
 
 All notable changes to vox-intelligence are documented in this file.
 
+## [0.5.2] — 2026-07-19
+
+### Ghost-audit: travessão de efeito em prosa vira block
+
+- **`TRAVESSAO_DE_EFEITO` agora é severity `block`** (em prosa corrente) — travessão/traço/dois-pontos usado como pausa dramática ou inciso removível reprova a nota (`red`). Este autor não usa travessão de efeito; antes caía em `warn` e escapava para `yellow`
+- **Abatimento de categoria restrito à estrutura de verbete** — o alívio de `TRAVESSAO_DE_EFEITO`/`PARALELISMO_MECANICO` em notas `category: etymology`/`disciple` vale só para glosas, acepções, tabelas de formas e fonologia. Prosa corrente (inclusive ensaio metodológico marcado `category: etymology`) recebe escrutínio completo. Corrige o vão em que uma nota-ensaio com `category: etymology` passava sem checagem de travessão (o `/style-test` também pula travessões nessas notas)
+- **Carve-out explícito** — travessões em títulos de fonte (frontmatter), blocos de citação (`>`)/código reproduzindo marcador de verbete, e estrutura de ficha de caractere não são reportados
+- **Fixtures** — nova `red-travessao-prose.md` (nota `category: etymology` em prosa com travessão → `red`); `yellow-voice.md` sem travessão (testa só os warns)
+
 ## [0.5.1] — 2026-07-15
 
 ### Suggest-annotations: atenção a ideias inusitadas + até 25 notas
