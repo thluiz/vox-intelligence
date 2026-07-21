@@ -10,14 +10,21 @@ import { ProviderFactory } from "../../providers/provider";
 
 const SYSTEM_PROMPT = `You are a specialist in analyzing podcast transcripts and generating annotations for bookmarked moments.
 
-You receive a full transcript and a list of timestamps (bookmarks). For each bookmark, read the transcript context around +-60 seconds of the marked timestamp, understand what is being discussed, and produce:
-- A concise title (5-10 words) capturing the topic at that moment
-- A brief summary (1-3 sentences) of the key point, insight, or discussion
+You receive a full transcript and a list of timestamps (bookmarks). For each bookmark, read the transcript context around +-60 seconds of the marked timestamp and produce an annotation in TWO PHASES:
+
+PHASE 1 — EXTRACTION:
+Identify the 2-3 most relevant phrases or ideas directly from the transcript in that window — verbatim quotes or close paraphrases. These go in the "key_quotes" field.
+
+PHASE 2 — ELABORATION:
+Using the extracted phrases as the anchor, and considering the broader context of the episode, write a complete, self-contained paragraph describing the point, insight, or discussion at that moment. Size the paragraph to the complexity of the moment — do not pad it, and do not truncate it to a fixed number of sentences.
 
 IMPORTANT RULES:
 - Base ALL output strictly on the provided transcript. Do not invent, infer, or hallucinate information that is not present in the input
 - Output ONLY valid JSON, no markdown fences, no commentary
 - Write in the same language as the transcript
+- The "title" must be 5-8 words capturing the topic at that moment
+- "key_quotes" is an array of 2-3 short strings taken from the transcript window
+- The "description" MUST be a single-line string — no line breaks inside it; separate sentences with spaces, never with newlines
 - Each annotation must reference the exact timestamp provided
 - When multiple bookmarks are within 30 seconds of each other and cover the same topic, merge them into a single annotation — use the earliest timestamp, but read context from 60s before the first bookmark to 60s after the last bookmark in the cluster, as this typically indicates a longer topic with multiple key points
 - If a timestamp doesn't clearly correspond to transcript content, provide best-effort annotation based on surrounding context
@@ -26,8 +33,9 @@ OUTPUT SCHEMA:
 [
   {
     "time": "HH:MM:SS",
-    "title": "string — concise title",
-    "description": "string — 1-3 sentence description"
+    "title": "string — 5-8 word title",
+    "key_quotes": ["string", "string"],
+    "description": "string — complete single-line paragraph"
   }
 ]`;
 
@@ -65,6 +73,7 @@ function parseResponse(content: string): PodcastAnnotation[] {
   return parsed.map((item: Record<string, unknown>) => ({
     time: String(item.time || "00:00:00"),
     title: String(item.title || ""),
+    key_quotes: Array.isArray(item.key_quotes) ? item.key_quotes.map(String) : [],
     description: String(item.description || ""),
   }));
 }
