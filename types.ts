@@ -161,6 +161,7 @@ export interface PodcastAnnotateRequest {
 export interface PodcastAnnotation {
   time: string;
   title: string;
+  key_quotes: string[];
   description: string;
 }
 
