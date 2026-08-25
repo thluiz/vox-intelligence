@@ -28,6 +28,7 @@ IMPORTANT RULES:
 - Each annotation must reference the exact timestamp provided
 - When multiple bookmarks are within 30 seconds of each other and cover the same topic, merge them into a single annotation — use the earliest timestamp, but read context from 60s before the first bookmark to 60s after the last bookmark in the cluster, as this typically indicates a longer topic with multiple key points
 - If a timestamp doesn't clearly correspond to transcript content, provide best-effort annotation based on surrounding context
+- The "description" must NOT restate the timestamp (e.g. never open with "No timestamp HH:MM:SS, ..." or "At timestamp HH:MM:SS, ..."/"Nesse momento, ..." as a throat-clearing preamble) — the timestamp is already shown separately alongside the title. Start the paragraph directly with the substantive content
 
 OUTPUT SCHEMA:
 [
