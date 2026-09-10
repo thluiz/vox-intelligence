@@ -21,5 +21,21 @@
   {
     "file": "green-clean.md",
     "verdict": ["green"]
+  },
+  {
+    "file": "yellow-cabecalho-dramatico.md",
+    "verdict": ["yellow"],
+    "mustIncludeRules": ["CABECALHO_DRAMATICO"]
+  },
+  {
+    "file": "yellow-narracao-processo.md",
+    "verdict": ["yellow"],
+    "mustIncludeRules": ["NARRACAO_DE_PROCESSO"]
+  },
+  {
+    "file": "green-research-warning-mark.md",
+    "verdict": ["green", "yellow"],
+    "mustExcludeRules": ["NARRACAO_DE_PROCESSO"]
   }
 ]
+

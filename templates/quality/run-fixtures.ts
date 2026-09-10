@@ -16,6 +16,7 @@ interface Expectation {
   verdict: string[];
   mustIncludeRules?: string[];
   mustIncludeAnyRule?: string[];
+  mustExcludeRules?: string[];
 }
 
 const baseUrl = (process.argv[2] || "http://localhost:8004").replace(/\/$/, "");
@@ -62,6 +63,9 @@ for (const exp of expectations) {
   }
   if (exp.mustIncludeAnyRule && !exp.mustIncludeAnyRule.some((r) => rules.includes(r))) {
     problems.push(`nenhuma das regras esperadas: ${exp.mustIncludeAnyRule.join(", ")}`);
+  }
+  for (const rule of exp.mustExcludeRules ?? []) {
+    if (rules.includes(rule)) problems.push(`regra indevida (falso-positivo): ${rule}`);
   }
   const unlocated = parsed.findings.filter((f) => f.line === null);
   if (unlocated.length > 0) {

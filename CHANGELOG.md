@@ -2,6 +2,17 @@
 
 All notable changes to vox-intelligence are documented in this file.
 
+## [1.1.0] — 2026-09-10
+
+### Ghost-audit: cabeçalho dramático e narração de processo
+
+- **Novo teste 20, `CABECALHO_DRAMATICO`** (severity `warn`) — heading interno (`##`, `###`) do corpo que dramatiza, provoca ou promete em vez de nomear o que a seção contém ("O Enigma da Datação Ming", "Quando tudo muda"). O `title` do frontmatter já era coberto pelo item 19 do checklist da skill; o vão era o corpo, e ele importa em docs de pesquisa e verbetes de dicionário
+- **Novo teste 21, `NARRACAO_DE_PROCESSO`** (severity `warn`) — a nota narra a própria busca ou sua falha ("não foi possível localizar", "as fontes consultadas não confirmam") em vez de omitir. Source-or-silence exige omissão na nota: o aviso de "não verificado" vai ao autor no chat, não ao leitor. Tique recorrente das skills `research` e `research-chinese-etymology`
+- **Mesmas exceções do teste 12** no 21 — item marcado com ⚠ em doc de pesquisa é provisório-reconhecido, e seções de log de trabalho (fontes consultadas, em aberto, próximos passos) são registro do autor, não prosa para o leitor. Sem isso o teste 21 brigaria com a exceção (b) do SOURCE_OR_SILENCE
+- **`mustExcludeRules` no `run-fixtures.ts`** — expectativa negada, para fixture que existe justamente para provar que uma regra NÃO dispara
+- **Fixtures** — `yellow-cabecalho-dramatico.md`, `yellow-narracao-processo.md` e `green-research-warning-mark.md` (guarda contra o falso-positivo do 21 em doc de pesquisa)
+- **Versão** — o `package.json` estava em 1.0.1 e o CHANGELOG parava em 0.5.2 (as versões de annotate não entraram aqui); ambos passam a 1.1.0
+
 ## [0.5.2] — 2026-07-19
 
 ### Ghost-audit: travessão de efeito em prosa vira block
@@ -93,3 +104,4 @@ Initial release of vox-intelligence AI gateway.
 - systemd service on port 8004 (HermesTools)
 - nginx gateway via `/api/vox-intelligence/`
 - Prompt caching: system message + fixed template prefix maximizes cache hits
+

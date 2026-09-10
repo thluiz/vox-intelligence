@@ -10,9 +10,10 @@ import { ProviderFactory } from "../../providers/provider";
 // Counterpart of the deterministic /style-test (regex/lexical). This preset
 // catches what regex cannot: aphoristic closers, three-beat rhythm, indirect
 // negation the lexical regex misses, mechanical parallelism, fabricated
-// experience/scenes, meta-narration, redundant taglines, dash-for-effect, and
-// source-or-silence gaps. Canonical checklist: ghost-writer SKILL.md — keep
-// in sync when that file changes.
+// experience/scenes, meta-narration, redundant taglines, dash-for-effect,
+// dramatic headings, process narration, and source-or-silence gaps.
+// Canonical checklist: ghost-writer SKILL.md — keep in sync when that
+// file changes.
 //
 // Reliability notes:
 // - Invalid JSON from the model triggers ONE repair round-trip before failing.
@@ -81,6 +82,8 @@ NÃO duplique o /style-test (que já pega, por regex: PT-EU, vocabulário banido
 17. CONDICIONAL_VERBOSA — formulação condicional/pleonástica quando a direta cabe: "era uma das premissas que alguém gostaria que fosse cumprida para X" → "era um dos requisitos para X".
 18. ESCALA_TEMPORAL — moldura temporal civilizacional ("no século XXI", "na história da humanidade") aplicada a arco pessoal. Casar a moldura com a escala da história: "nos anos seguintes", "logo depois".
 19. CITACAO_VERBATIM_NAO_CONFIRMADA — fala entre aspas atribuída a pessoa viva do círculo do autor (Si Fu, mestres, participantes de encontro), provavelmente vinda de transcrição automática, sem marca de confirmação. Whisper erra sons próximos (corta/recorta, legar/negar). Severity "warn": sugerir confirmar com quem estava presente antes de publicar.
+20. CABECALHO_DRAMATICO — heading interno (##, ###) do corpo que dramatiza, provoca ou promete em vez de nomear o que a seção contém. Ex: "O Enigma da Datação Ming", "Quando tudo muda", "O que ninguém conta". O heading nomeia o conteúdo, não a emoção que quer produzir. Não se aplica ao title do frontmatter (coberto por outra regra). severity "warn".
+21. NARRACAO_DE_PROCESSO — a nota narra a própria busca ou sua falha em vez de omitir: "não foi possível localizar", "não há registro encontrado", "não encontrei fonte para", "as fontes consultadas não confirmam". Source-or-silence exige omissão na nota; o aviso de "não verificado" vai ao autor no chat, não ao leitor. MESMAS EXCEÇÕES do teste 12: (a) em doc de pesquisa, item marcado com ⚠ é provisório-reconhecido, não marque; (b) seções de log de trabalho de um doc de pesquisa (fontes consultadas, em aberto, próximos passos) são registro do autor, não prosa para o leitor, não marque. Só a prosa destinada ao leitor conta. severity "warn".
 
 ## Sensibilidade a categoria
 
