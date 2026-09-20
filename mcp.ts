@@ -146,9 +146,10 @@ const TOOLS = [
     name: "suggest_annotations",
     description:
       "Analyze a podcast transcript and suggest annotation-worthy moments. " +
-      "Returns 8-20 suggestions with timestamps, tiers (concept/data/reflection), " +
+      "Returns as many suggestions as the episode genuinely warrants (no fixed " +
+      "floor or ceiling) with timestamps, tiers (concept/data/reflection), " +
       "quotes, and overlap flags for existing annotations. " +
-      "Uses a cheap model (Gemini Flash) by default — ideal for first-pass analysis.",
+      "Model chain: GPT-5.2 primary, Gemini 2.5 Flash fallback.",
     inputSchema: {
       type: "object",
       properties: {
