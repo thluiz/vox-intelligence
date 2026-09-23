@@ -10,6 +10,7 @@ import { handleMeetingSummarize } from "./templates/meetings/summarize-master-co
 import { handleGhostAudit } from "./templates/quality/ghost-audit";
 import { handleEtymologyNote } from "./templates/scholion/etymology-note";
 import { handleQuoteNote } from "./templates/scholion/quote-note";
+import { handleWebclipSummary } from "./templates/scholion/webclip-summary";
 import type { OpenAIChatRequest, OpenAIChatResponse, ExtractBookmarksRequest } from "./types";
 import { getTextContent } from "./types";
 import { handleMCP } from "./mcp";
@@ -359,6 +360,26 @@ const server = Bun.serve({
         const sizeError = validateInputSize(String(body.quote), String(body.context || "").length);
         if (sizeError) return errorResponse(sizeError, 413);
         const result = await handleQuoteNote(body as any, factory, config);
+        return jsonResponse(result);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("JSON Parse")) return errorResponse("Invalid JSON body");
+        return errorResponse(msg, 502);
+      }
+    }
+
+    // Preset: webclip note composition (Scholion add-scholion-webclip)
+    if (path === "/presets/scholion/webclip-summary" && req.method === "POST") {
+      try {
+        const body = await req.json() as Record<string, unknown>;
+        for (const field of ["text", "title", "url", "domain"]) {
+          if (!body[field] || typeof body[field] !== "string") {
+            return errorResponse(`Missing required field: ${field}`);
+          }
+        }
+        const sizeError = validateInputSize(String(body.text), String(body.title).length);
+        if (sizeError) return errorResponse(sizeError, 413);
+        const result = await handleWebclipSummary(body as any, factory, config);
         return jsonResponse(result);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
