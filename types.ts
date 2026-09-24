@@ -25,6 +25,10 @@ export interface ChatCompletionRequest {
   maxTokens: number;
   temperature?: number;
   reasoning?: { effort: "none" | "low" | "medium" | "high" };
+  // Absolute wall-clock deadline (epoch ms) shared by every attempt in a
+  // fallback chain. Lets a caller with its own short HTTP timeout make the
+  // upstream call give up too, instead of leaving it running orphaned.
+  deadline?: number;
 }
 
 export interface ChatMessage {

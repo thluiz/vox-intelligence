@@ -49,8 +49,11 @@ export class OpenRouterProvider implements AIProvider {
       }
     }
 
+    const timeoutMs = req.deadline !== undefined
+      ? Math.max(1, Math.min(this.defaultTimeout, req.deadline - Date.now()))
+      : this.defaultTimeout;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.defaultTimeout);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -97,7 +100,7 @@ export class OpenRouterProvider implements AIProvider {
       };
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
-        throw new Error(`OpenRouter timeout after ${this.defaultTimeout}ms`);
+        throw new Error(`OpenRouter timeout after ${timeoutMs}ms`);
       }
       throw err;
     } finally {
