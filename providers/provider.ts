@@ -95,6 +95,11 @@ export class ProviderFactory {
     const errors: string[] = [];
 
     for (const modelStr of modelChain) {
+      if (req.deadline !== undefined && Date.now() >= req.deadline) {
+        errors.push(`${modelStr}: skipped, request deadline exceeded`);
+        break;
+      }
+
       const parsed = parseModelString(modelStr);
       const provider = this.getProvider(parsed.provider);
 

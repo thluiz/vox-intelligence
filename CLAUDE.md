@@ -23,7 +23,7 @@ vox-intelligence exposes an MCP server at `POST /mcp` (Streamable HTTP transport
 | `POST /presets/scholion/ghost-audit` | Ghost-writer voice audit for Scholion notes (HTTP direct). Body: `{content, slug?, strict?}`. Regression eval: `bun templates/quality/run-fixtures.ts` |
 | `POST /presets/scholion/etymology-note` | Chinese etymology note synthesis (Scholion radicals pipeline). Body: `{char, radicalNum, hex, date, gabarito, dump}` |
 | `POST /presets/scholion/quote-note` | Verified-quote note composition (add-scholion-quote). Body: `{quote, presumedAuthor?, context?, sourceUrl?, fromBook?}` |
-| `POST /presets/scholion/webclip-summary` | Webclip note composition (add-scholion-webclip) — resumo+fichamento+summary+tags from raw captured text, ghost-writer voice rules baked into the prompt. Body: `{text, title, url, domain, relatedNotes?}` |
+| `POST /presets/scholion/webclip-summary` | Webclip note composition (add-scholion-webclip) — resumo+fichamento+summary+tags from raw captured text, ghost-writer voice rules baked into the prompt. Body: `{text, title, url, domain, relatedNotes?, model?, fallbackModels?, timeoutMs?}`. `timeoutMs` (also accepted by ghost-audit) is one wall-clock budget for the whole preset, fallbacks and repair retry included |
 
 ### MCP Tools
 

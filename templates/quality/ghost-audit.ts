@@ -34,6 +34,10 @@ export interface GhostAuditRequest {
   strict?: boolean;
   model?: string;
   fallbackModels?: string[];
+  // Optional wall-clock budget (ms) for the whole preset, fallbacks and the
+  // JSON-repair retry included. Callers with a short HTTP timeout (e.g.
+  // scholion-webclipper) send it so the upstream call dies with them.
+  timeoutMs?: number;
 }
 
 export interface GhostAuditFinding {
@@ -222,10 +226,11 @@ export async function handleGhostAudit(
   // strict mode runs the first two chain entries independently and unions.
   const PRESET_MODELS = ["openrouter/openai/gpt-5.2", "openrouter/anthropic/claude-opus-4.5"];
   const modelChain = resolveModelChain(req.model, req.fallbackModels, PRESET_MODELS, config.defaultModels);
+  const deadline = req.timeoutMs ? Date.now() + req.timeoutMs : undefined;
 
   const runOnce = async (chain: string[]): Promise<AuditRun> => {
     const result = await factory.completeWithFallback(
-      { model: "", messages, maxTokens: config.maxOutputTokens, temperature: 0.2 },
+      { model: "", messages, maxTokens: config.maxOutputTokens, temperature: 0.2, deadline },
       chain,
     );
     try {
@@ -243,7 +248,7 @@ export async function handleGhostAudit(
         { role: "user", content: REPAIR_PROMPT },
       ];
       const retry = await factory.completeWithFallback(
-        { model: "", messages: repairMessages, maxTokens: config.maxOutputTokens, temperature: 0 },
+        { model: "", messages: repairMessages, maxTokens: config.maxOutputTokens, temperature: 0, deadline },
         chain,
       );
       return {
