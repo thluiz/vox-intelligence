@@ -157,6 +157,9 @@ export function detectLang(text: string): Lang {
   for (const w of words) {
     if (EN_WORDS.has(w)) en++;
     else if (PT_WORDS.has(w)) pt++;
+    // Short PT summaries full of English tech terms ("O texto apresenta padrões de EDA...")
+    // fall short on stopwords alone; ã/õ/ç never show up in English prose.
+    else if (/[ãõç]/.test(w)) pt++;
   }
   if (en + pt < 6) return "?";
   if (en >= 2 * pt) return "en";
@@ -182,9 +185,15 @@ export function languageMismatches(sourceText: string, fields: { summary: string
     const lang = detectLang(text);
     if (lang !== "?" && lang !== target) out.push(`${name} em ${lang}`);
   }
-  // gpt-5.4-mini occasionally drops a stray Cyrillic word into English prose.
-  const stray = `${fields.summary}\n${fields.body}`.match(/[Ѐ-ӿ]+/);
-  if (stray) out.push(`palavra em outro alfabeto: "${stray[0]}"`);
+  // gpt-5.4-mini occasionally drops a stray word in another script into the prose
+  // (seen: Cyrillic "считает", Georgian "რაოდენ"). Non-Latin letters are fine only
+  // when the page itself uses that script (e.g. a quoted Chinese term).
+  const nonLatin = /(?!\p{Script=Latin})\p{L}+/gu;
+  const sourceScripts = new Set(sourceText.match(nonLatin)?.join("") ?? "");
+  const stray = `${fields.summary}\n${fields.body}`
+    .match(nonLatin)
+    ?.find((w) => [...w].some((ch) => !sourceScripts.has(ch)));
+  if (stray) out.push(`palavra em outro alfabeto: "${stray}"`);
   // One word is too little for detectLang, so the heading is checked by name.
   const heading = fichamento.match(/^##\s*([^\n]*)/)?.[1].trim().toLowerCase() ?? "";
   const expected = target === "en" ? "reading notes" : "fichamento";
@@ -227,7 +236,10 @@ function parseFields(raw: string): ParsedFields {
   const summary = typeof obj.summary === "string" ? obj.summary.trim() : "";
   const language = typeof obj.language === "string" && obj.language.trim() ? obj.language.trim() : "pt";
   const body = typeof obj.body === "string" ? obj.body.trim() : "";
-  const tags = Array.isArray(obj.tags) ? (obj.tags as unknown[]).map(String).filter(Boolean) : [];
+  // Tags are kebab-case without accents ("habitação" -> "habitacao"), same as slugs.
+  const tags = Array.isArray(obj.tags)
+    ? (obj.tags as unknown[]).map((t) => String(t).normalize("NFD").replace(/[̀-ͯ]/g, "")).filter(Boolean)
+    : [];
 
   if (!slug) errs.push("slug ausente/vazio");
   if (!title) errs.push("title ausente");
