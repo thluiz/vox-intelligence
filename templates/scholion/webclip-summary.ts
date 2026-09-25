@@ -182,6 +182,9 @@ export function languageMismatches(sourceText: string, fields: { summary: string
     const lang = detectLang(text);
     if (lang !== "?" && lang !== target) out.push(`${name} em ${lang}`);
   }
+  // gpt-5.4-mini occasionally drops a stray Cyrillic word into English prose.
+  const stray = `${fields.summary}\n${fields.body}`.match(/[Ѐ-ӿ]+/);
+  if (stray) out.push(`palavra em outro alfabeto: "${stray[0]}"`);
   // One word is too little for detectLang, so the heading is checked by name.
   const heading = fichamento.match(/^##\s*([^\n]*)/)?.[1].trim().toLowerCase() ?? "";
   const expected = target === "en" ? "reading notes" : "fichamento";
