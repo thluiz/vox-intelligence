@@ -60,7 +60,7 @@ export interface WebclipSummaryResult {
   tags: string[];
   // Detected language of the source text (e.g. "pt", "en") — informational.
   language: string;
-  // "<resumo em prosa>\n\n## Fichamento\n\n- ...". No frontmatter, no "Fonte:".
+  // "<resumo em prosa>\n\n## Fichamento\n\n- ..." ("## Reading notes" in an English note). No frontmatter, no "Fonte:".
   body: string;
   has_commentary: false;
   // Deterministic lexical hits (PT-EU, banned PT-BR vocab) when language is Portuguese. Non-fatal.
@@ -77,6 +77,7 @@ const SYSTEM_PROMPT = `Você compõe o CONTEÚDO de UMA nota "webclip" do Scholi
 
 REGRAS INEGOCIÁVEIS:
 - Língua: resumo, fichamento, summary e tags seguem a LÍNGUA DO TEXTO BRUTO fornecido, nunca forçar PT-BR. Página em inglês → nota em inglês. Página em português → nota em PT-BR (nunca PT-EU: não usar "tu fazes/estás/comboio/autocarro/ecrã/betão/facto/reacção/acção/telemóvel").
+- NUNCA misturar línguas: a nota inteira fica numa língua só. Numa página em inglês, o resumo, a heading, CADA item do fichamento, o summary e as tags ficam em inglês: nenhuma palavra de português na nota. Estas instruções estão em português, mas isso não muda a língua-alvo.
 - Source-or-silence: cada ponto do fichamento e cada frase do resumo precisa vir do TEXTO BRUTO. NUNCA invente, complete ou infira além do que está escrito. Se um ponto não está claramente no texto, omita — não parafraseie de forma plausível para preencher.
 - Fichamento PARAFRASEADO, nunca verbatim — trechos citáveis literais não pertencem aqui.
 - Sem "Fonte:" no corpo — fontes vivem só no frontmatter, que você não escreve.
@@ -99,7 +100,7 @@ CAMPOS DO JSON:
 - summary: ~150–200 chars na língua-alvo — o que a página argumenta, não uma descrição genérica ("artigo sobre...").
 - tags: array de 2–4 strings kebab-case, na língua-alvo, incluindo tema(s) das NOTAS RELACIONADAS quando genuinamente aplicável.
 - language: código curto da língua-alvo (ex. "pt", "en", "es").
-- body: "<resumo em prosa, 1–2 parágrafos>\n\n## Fichamento\n\n- <ponto 1>\n- <ponto 2>\n...". A heading é sempre "## Fichamento" (não traduza a heading mesmo em nota noutra língua).
+- body: "<resumo em prosa, 1–2 parágrafos>\n\n## Fichamento\n\n- <ponto 1>\n- <ponto 2>\n...". A heading segue a língua-alvo: "## Fichamento" em português, "## Reading notes" em inglês, o equivalente direto em outra língua. Sempre numa linha própria, com linha em branco antes.
 
 SAÍDA (CRÍTICO):
 - Responda APENAS com o objeto JSON válido. Sem texto antes/depois, sem cercas de código, sem markdown fora do campo "body".`;
@@ -136,6 +137,56 @@ function lexicalCheck(body: string, language: string): string[] {
   const banned = body.match(BANNED_VOCAB);
   if (banned) hits.push(`vocabulário banido: "${banned[0]}"`);
   return hits;
+}
+
+// ---------- Deterministic language-consistency guard ----------
+// The model (esp. the mini tier) drifts into Portuguese after the PT heading
+// heading while the lead stays in the page's language. Stopword counts
+// are enough to tell en from pt; tokens shared by both ("a", "as", "no", "do")
+// are left out on purpose.
+
+const EN_WORDS = new Set("the and of to is in that it for with are this on be by from was which an or its their they not but have has can".split(" "));
+const PT_WORDS = new Set("o os de da das dos que em um uma para com não é por na mais como ao pelo pela se sua seu entre também".split(" "));
+
+type Lang = "en" | "pt" | "?";
+
+export function detectLang(text: string): Lang {
+  const words = text.toLowerCase().match(/[a-zà-ÿ]+/g) ?? [];
+  let en = 0;
+  let pt = 0;
+  for (const w of words) {
+    if (EN_WORDS.has(w)) en++;
+    else if (PT_WORDS.has(w)) pt++;
+  }
+  if (en + pt < 6) return "?";
+  if (en >= 2 * pt) return "en";
+  if (pt >= 2 * en) return "pt";
+  return "?";
+}
+
+// Returns a description of each part that is not in the source language, or [] if consistent.
+export function languageMismatches(sourceText: string, fields: { summary: string; body: string }): string[] {
+  const target = detectLang(sourceText);
+  if (target === "?") return [];
+  // Split at the first "## " heading, even when the model glued it to the end of a paragraph.
+  const cut = fields.body.search(/##\s/);
+  const lead = cut < 0 ? fields.body : fields.body.slice(0, cut);
+  const fichamento = cut < 0 ? "" : fields.body.slice(cut);
+  const parts: [string, string][] = [
+    ["resumo", lead],
+    ["fichamento", fichamento],
+    ["summary", fields.summary],
+  ];
+  const out: string[] = [];
+  for (const [name, text] of parts) {
+    const lang = detectLang(text);
+    if (lang !== "?" && lang !== target) out.push(`${name} em ${lang}`);
+  }
+  // One word is too little for detectLang, so the heading is checked by name.
+  const heading = fichamento.match(/^##\s*([^\n]*)/)?.[1].trim().toLowerCase() ?? "";
+  const expected = target === "en" ? "reading notes" : "fichamento";
+  if (heading && heading !== expected) out.push(`heading "${heading}" (esperado "${expected}")`);
+  return out.length ? [`língua-alvo ${target}; ${out.join(", ")}`] : [];
 }
 
 // ---------- Parse + validate the JSON contract ----------
@@ -179,7 +230,7 @@ function parseFields(raw: string): ParsedFields {
   if (!title) errs.push("title ausente");
   if (!summary) errs.push("summary ausente");
   if (!body) errs.push("body ausente");
-  if (!/##\s*Fichamento/i.test(body)) errs.push("body sem seção '## Fichamento'");
+  if (!/^##\s+\S/m.test(body)) errs.push("body sem a heading '## ' do fichamento numa linha própria");
   if (tags.length === 0) errs.push("tags vazias");
   if (errs.length) throw new Error("validação falhou: " + errs.join("; "));
 
@@ -207,6 +258,11 @@ export async function handleWebclipSummary(
   let fields: ParsedFields;
   let model = result.model;
   let usage = result.usage;
+  let lastContent = result.content;
+  const addUsage = (u: typeof usage) =>
+    u && usage
+      ? { promptTokens: usage.promptTokens + u.promptTokens, completionTokens: usage.completionTokens + u.completionTokens }
+      : u ?? usage;
 
   try {
     fields = parseFields(result.content);
@@ -230,13 +286,34 @@ export async function handleWebclipSummary(
     );
     fields = parseFields(retry.content);
     model = retry.model;
-    usage =
-      retry.usage && result.usage
-        ? {
-            promptTokens: result.usage.promptTokens + retry.usage.promptTokens,
-            completionTokens: result.usage.completionTokens + retry.usage.completionTokens,
-          }
-        : retry.usage ?? result.usage;
+    usage = addUsage(retry.usage);
+    lastContent = retry.content;
+  }
+
+  // Mixed-language notes are never returned: one repair turn, then a hard error.
+  const mixed = languageMismatches(req.text, fields);
+  if (mixed.length) {
+    console.log(`[webclip-summary] idioma misto (${mixed.join("; ")}); pedindo reescrita`);
+    const langMessages: ChatMessage[] = [
+      ...messages,
+      { role: "assistant", content: lastContent },
+      {
+        role: "user",
+        content:
+          `Sua resposta misturou línguas (${mixed.join("; ")}). ` +
+          "A nota inteira precisa estar na língua do TEXTO BRUTO: resumo, heading, cada item do fichamento, summary e tags. " +
+          '(Em inglês a heading é "## Reading notes".) Responda novamente APENAS com o objeto JSON completo.',
+      },
+    ];
+    const retry = await factory.completeWithFallback(
+      { model: "", messages: langMessages, maxTokens: config.maxOutputTokens, temperature: 0, deadline },
+      modelChain,
+    );
+    fields = parseFields(retry.content);
+    model = retry.model;
+    usage = addUsage(retry.usage);
+    const still = languageMismatches(req.text, fields);
+    if (still.length) throw new Error(`idioma misto após reescrita: ${still.join("; ")}`);
   }
 
   return {
