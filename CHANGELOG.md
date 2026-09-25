@@ -2,6 +2,15 @@
 
 All notable changes to vox-intelligence are documented in this file.
 
+## [1.2.0] — 2026-09-25
+
+### Uma língua só por nota
+
+- **Novo teste 22 no ghost-audit, `IDIOMA_MISTO`** (severity `block`) — a nota mistura línguas (resumo em inglês e fichamento em português, heading "## Fichamento" numa nota em inglês). O `webclip-summary` com `gpt-5.4-mini` produziu 228 notas assim e a auditoria aprovava todas, porque nenhuma regra olhava a língua além do PT-EU
+- **`webclip-summary`: a heading segue a língua da nota** — "## Fichamento" em português, "## Reading notes" em inglês. Antes era fixa em português, e o modelo escorregava para o português logo depois dela
+- **`webclip-summary`: guarda determinística de língua** — compara resumo, fichamento, summary e heading com a língua do texto bruto (contagem de stopwords en/pt). Divergiu: uma reescrita; divergiu de novo: erro, a nota não volta
+- **Fixture** — `red-idioma-misto.md`, nota real com resumo em inglês e fichamento em português
+
 ## [1.1.0] — 2026-09-10
 
 ### Ghost-audit: cabeçalho dramático e narração de processo

@@ -89,6 +89,8 @@ NÃO duplique o /style-test (que já pega, por regex: PT-EU, vocabulário banido
 20. CABECALHO_DRAMATICO — heading interno (##, ###) do corpo que dramatiza, provoca ou promete em vez de nomear o que a seção contém. Ex: "O Enigma da Datação Ming", "Quando tudo muda", "O que ninguém conta". O heading nomeia o conteúdo, não a emoção que quer produzir. Não se aplica ao title do frontmatter (coberto por outra regra). severity "warn".
 21. NARRACAO_DE_PROCESSO — a nota narra a própria busca ou sua falha em vez de omitir: "não foi possível localizar", "não há registro encontrado", "não encontrei fonte para", "as fontes consultadas não confirmam". Source-or-silence exige omissão na nota; o aviso de "não verificado" vai ao autor no chat, não ao leitor. MESMAS EXCEÇÕES do teste 12: (a) em doc de pesquisa, item marcado com ⚠ é provisório-reconhecido, não marque; (b) seções de log de trabalho de um doc de pesquisa (fontes consultadas, em aberto, próximos passos) são registro do autor, não prosa para o leitor, não marque. Só a prosa destinada ao leitor conta. severity "warn".
 
+22. IDIOMA_MISTO — a prosa autoral da nota mistura línguas: resumo em inglês e fichamento em português, itens de lista alternando de língua, parágrafo que troca de língua no meio. A nota inteira fica numa língua só (PT-BR, ou a língua da fonte numa nota \`category: webclip\`), incluindo headings: "## Fichamento" numa nota em inglês também é violação (lá a heading é "## Reading notes"). NÃO conta: títulos de fonte, citações entre aspas ou em bloco (>), termos técnicos e nomes próprios usados no meio da frase. Cite como "quote" o trecho que está na língua minoritária. severity "block".
+
 ## Sensibilidade a categoria
 
 Leia o frontmatter. Se \`category: etymology\` ou \`category: disciple\` (notas de referência filológica), o abatimento vale APENAS para a estrutura de verbete: glosas de dicionário, listas de acepções, tabelas de formas, blocos de fonologia. Sobre ESSA estrutura, não reporte TRAVESSAO_DE_EFEITO nem PARALELISMO_MECANICO.
@@ -100,7 +102,7 @@ O abatimento NÃO se estende à prosa. Todo parágrafo de prosa corrente do corp
 - Cite SEMPRE o trecho verbatim (campo "quote") para o chamador localizar. Copie o trecho EXATAMENTE como está na nota, sem parafrasear nem corrigir.
 - "suggestion" deve ser uma reescrita cirúrgica POSITIVA em PT-BR, ou instrução clara de corte. Não reescreva a nota inteira.
 - Não invente violação para parecer rigoroso. Se o parágrafo está limpo, não reporte nada dele. Um relatório honesto pode vir vazio.
-- SOURCE_OR_SILENCE, PT_EU e TRAVESSAO_DE_EFEITO (em prosa corrente) são sempre severity "block". Os demais geralmente "warn" (o autor decide), salvo flagrante.
+- SOURCE_OR_SILENCE, PT_EU, IDIOMA_MISTO e TRAVESSAO_DE_EFEITO (em prosa corrente) são sempre severity "block". Os demais geralmente "warn" (o autor decide), salvo flagrante.
 - verdict: "red" se houver QUALQUER finding "block"; "yellow" se só houver "warn"; "green" se findings vazio.
 
 Responda APENAS com JSON válido, sem cercas de código, neste formato:

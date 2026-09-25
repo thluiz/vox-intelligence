@@ -36,6 +36,11 @@
     "file": "green-research-warning-mark.md",
     "verdict": ["green", "yellow"],
     "mustExcludeRules": ["NARRACAO_DE_PROCESSO"]
+  },
+  {
+    "file": "red-idioma-misto.md",
+    "verdict": ["red"],
+    "mustIncludeRules": ["IDIOMA_MISTO"]
   }
 ]
 
