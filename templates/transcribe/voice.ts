@@ -7,6 +7,7 @@
  */
 
 import type { Config } from "../../config";
+import { openRouterTraceFields } from "../../observability";
 
 export interface VoiceTranscribeResult {
   transcript: string;
@@ -76,6 +77,7 @@ export async function handleVoiceTranscribe(
             },
           ],
           max_tokens: 4096,
+          ...openRouterTraceFields(),
         }),
       });
 

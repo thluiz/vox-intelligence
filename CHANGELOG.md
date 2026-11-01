@@ -2,6 +2,17 @@
 
 All notable changes to vox-intelligence are documented in this file.
 
+## [1.4.0] — 2026-11-01
+
+### Chamadas ao OpenRouter marcadas por preset
+
+Para o Broadcast do OpenRouter (Langfuse e afins) mostrar o consumo por ação, e não só por modelo. Os campos são metadados da requisição, fora do prompt: não custam tokens e o broadcast sai depois da resposta.
+
+- **`observability.ts`** — contexto por requisição (`AsyncLocalStorage`) com o preset, a porta de entrada (`http` ou `mcp`) e o `session_id`. Toda chamada ao OpenRouter feita dentro dele leva `user: "vox:<preset>"`, `trace: {service, preset, via, step?}` e, se houver, `session_id`. Fora de contexto o corpo da requisição não muda
+- **`server.ts`** — abre o contexto a partir da rota (`/presets/scholion/ghost-audit` vira `scholion/ghost-audit`, `/v1/chat/completions` vira `chat`). O header `x-session-id` (até 128 caracteres) vira `session_id`, para o chamador agrupar várias requisições, como o suggest e o annotate de um mesmo episódio
+- **`mcp.ts`** — cada `tools/call` reabre o contexto com o mesmo nome de preset da rota HTTP equivalente (`podcast_annotate` vira `podcast/annotate`), mantendo o `session_id`
+- **`providers/openrouter.ts`** e as três chamadas diretas (web search do `quote-note` e do diálogo holográfico com `step: "web-search"`, transcrição de voz) incluem os campos
+
 ## [1.3.0] — 2026-11-01
 
 ### Modelos Anthropic na frente de cada cadeia

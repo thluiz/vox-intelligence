@@ -15,6 +15,7 @@ import type { ChatMessage } from "../../types";
 import { resolveModelChain } from "../../types";
 import type { Config } from "../../config";
 import { ProviderFactory, parseModelString } from "../../providers/provider";
+import { openRouterTraceFields } from "../../observability";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -192,6 +193,7 @@ async function webSearch(query: string, apiKey: string): Promise<string> {
       model: "perplexity/sonar-pro",
       messages: [{ role: "user", content: query }],
       max_tokens: 2000,
+      ...openRouterTraceFields("web-search"),
     }),
   });
   if (!res.ok) {

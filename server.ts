@@ -14,6 +14,7 @@ import { handleWebclipSummary } from "./templates/scholion/webclip-summary";
 import type { OpenAIChatRequest, OpenAIChatResponse, ExtractBookmarksRequest } from "./types";
 import { getTextContent } from "./types";
 import { handleMCP } from "./mcp";
+import { withCallContext, presetFromPath, sessionIdFrom } from "./observability";
 
 const config = loadConfig();
 const factory = new ProviderFactory(config);
@@ -193,7 +194,20 @@ async function handlePresetSuggestAnnotations(body: unknown): Promise<Response> 
 
 const server = Bun.serve({
   port: config.port,
-  async fetch(req) {
+  fetch(req) {
+    // Tag every OpenRouter call made while serving this request with the
+    // preset name and the caller's session (see observability.ts). MCP calls
+    // get a nested context per tool inside mcp.ts.
+    const path = new URL(req.url).pathname;
+    const preset = presetFromPath(path) ?? "mcp/unknown";
+    return withCallContext(
+      { preset, via: path === "/mcp" ? "mcp" : "http", sessionId: sessionIdFrom(req) },
+      () => route(req),
+    );
+  },
+});
+
+async function route(req: Request): Promise<Response> {
     const url = new URL(req.url);
     const path = url.pathname;
 
@@ -407,8 +421,7 @@ const server = Bun.serve({
     }
 
     return errorResponse("Not found", 404);
-  },
-});
+}
 
 console.log(`[vox-intelligence] Running on port ${server.port}`);
 console.log(`[vox-intelligence] Providers: ${[

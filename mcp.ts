@@ -20,6 +20,7 @@ import { handlePodcastAnnotate } from "./templates/podcasts/annotate";
 import { handleExtractBookmarks } from "./templates/vision/extract-bookmarks";
 import { handleSuggestAnnotations } from "./templates/podcasts/suggest-annotations";
 import { handleQuoteNote } from "./templates/scholion/quote-note";
+import { withCallContext, currentCallContext, presetFromMcpTool } from "./observability";
 
 // ── MCP JSON-RPC types ────────────────────────────────────────────────────────
 
@@ -317,103 +318,122 @@ async function dispatch(
     // ── Tool invocation ────────────────────────────────────────────────────
     case "tools/call": {
       const toolName = params?.name as string | undefined;
-      const args = (params?.arguments ?? {}) as Record<string, unknown>;
-
-      try {
-        let resultData: unknown;
-
-        if (toolName === "podcast_episode") {
-          if (!args.metadata || !args.transcript) {
-            return err(id, -32602, "Missing required args: metadata, transcript");
-          }
-          const { response, parsed } = await handlePodcastEpisode(
-            args as any,
-            factory,
-            config,
-          );
-          resultData = { ...response, "x-parsed": parsed };
-
-        } else if (toolName === "podcast_annotate") {
-          if (!args.transcript || !args.bookmarks) {
-            return err(id, -32602, "Missing required args: transcript, bookmarks");
-          }
-          const { response, parsed } = await handlePodcastAnnotate(
-            args as any,
-            factory,
-            config,
-          );
-          resultData = { ...response, "x-parsed": parsed };
-
-        } else if (toolName === "vision_extract_bookmarks") {
-          const images = args.images;
-          if (!Array.isArray(images) || images.length === 0) {
-            return err(id, -32602, "Missing required args: images (non-empty array)");
-          }
-          const { response, parsed } = await handleExtractBookmarks(
-            args as any,
-            factory,
-            config,
-          );
-          resultData = { ...response, "x-parsed": parsed };
-
-        } else if (toolName === "suggest_annotations") {
-          const episode = args.episode as Record<string, unknown> | undefined;
-          if (!episode || !episode.transcript) {
-            return err(id, -32602, "Missing required args: episode with transcript");
-          }
-          const { response, parsed } = await handleSuggestAnnotations(
-            args as any,
-            factory,
-            config,
-          );
-          resultData = { ...response, "x-parsed": parsed };
-
-        } else if (toolName === "quote_note") {
-          if (!args.quote) {
-            return err(id, -32602, "Missing required arg: quote");
-          }
-          resultData = await handleQuoteNote(args as any, factory, config);
-
-        } else if (toolName === "chat") {
-          if (!args.messages) {
-            return err(id, -32602, "Missing required args: messages");
-          }
-          const modelChain = resolveModelChain(
-            args.model as string | undefined,
-            args.fallbackModels as string[] | undefined,
-            undefined,
-            config.defaultModels,
-          );
-          const result = await factory.completeWithFallback(
-            {
-              model: modelChain[0],
-              messages: args.messages as any,
-              maxTokens: (args.maxTokens as number) || config.maxOutputTokens,
-              temperature: args.temperature as number | undefined,
-            },
-            modelChain,
-          );
-          resultData = { content: result.content, model: result.model, usage: result.usage };
-
-        } else {
-          return err(id, -32601, `Unknown tool: ${toolName ?? "(none)"}`);
-        }
-
-        return ok(id, {
-          content: [{ type: "text", text: JSON.stringify(resultData, null, 2) }],
-        });
-
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        return ok(id, {
-          content: [{ type: "text", text: `Error: ${msg}` }],
-          isError: true,
-        });
-      }
+      // Retag the context opened by server.ts with the tool's preset name,
+      // keeping the caller's session id.
+      return withCallContext(
+        {
+          preset: presetFromMcpTool(toolName),
+          via: "mcp",
+          sessionId: currentCallContext()?.sessionId,
+        },
+        () => callTool(toolName, params, id, factory, config),
+      );
     }
 
     default:
       return err(id, -32601, `Method not found: ${method}`);
+  }
+}
+
+async function callTool(
+  toolName: string | undefined,
+  params: Record<string, unknown> | undefined,
+  id: string | number | null,
+  factory: ProviderFactory,
+  config: Config,
+): Promise<MCPResponse> {
+  const args = (params?.arguments ?? {}) as Record<string, unknown>;
+
+  try {
+    let resultData: unknown;
+
+    if (toolName === "podcast_episode") {
+      if (!args.metadata || !args.transcript) {
+        return err(id, -32602, "Missing required args: metadata, transcript");
+      }
+      const { response, parsed } = await handlePodcastEpisode(
+        args as any,
+        factory,
+        config,
+      );
+      resultData = { ...response, "x-parsed": parsed };
+
+    } else if (toolName === "podcast_annotate") {
+      if (!args.transcript || !args.bookmarks) {
+        return err(id, -32602, "Missing required args: transcript, bookmarks");
+      }
+      const { response, parsed } = await handlePodcastAnnotate(
+        args as any,
+        factory,
+        config,
+      );
+      resultData = { ...response, "x-parsed": parsed };
+
+    } else if (toolName === "vision_extract_bookmarks") {
+      const images = args.images;
+      if (!Array.isArray(images) || images.length === 0) {
+        return err(id, -32602, "Missing required args: images (non-empty array)");
+      }
+      const { response, parsed } = await handleExtractBookmarks(
+        args as any,
+        factory,
+        config,
+      );
+      resultData = { ...response, "x-parsed": parsed };
+
+    } else if (toolName === "suggest_annotations") {
+      const episode = args.episode as Record<string, unknown> | undefined;
+      if (!episode || !episode.transcript) {
+        return err(id, -32602, "Missing required args: episode with transcript");
+      }
+      const { response, parsed } = await handleSuggestAnnotations(
+        args as any,
+        factory,
+        config,
+      );
+      resultData = { ...response, "x-parsed": parsed };
+
+    } else if (toolName === "quote_note") {
+      if (!args.quote) {
+        return err(id, -32602, "Missing required arg: quote");
+      }
+      resultData = await handleQuoteNote(args as any, factory, config);
+
+    } else if (toolName === "chat") {
+      if (!args.messages) {
+        return err(id, -32602, "Missing required args: messages");
+      }
+      const modelChain = resolveModelChain(
+        args.model as string | undefined,
+        args.fallbackModels as string[] | undefined,
+        undefined,
+        config.defaultModels,
+      );
+      const result = await factory.completeWithFallback(
+        {
+          model: modelChain[0],
+          messages: args.messages as any,
+          maxTokens: (args.maxTokens as number) || config.maxOutputTokens,
+          temperature: args.temperature as number | undefined,
+        },
+        modelChain,
+      );
+      resultData = { content: result.content, model: result.model, usage: result.usage };
+
+    } else {
+      return err(id, -32601, `Unknown tool: ${toolName ?? "(none)"}`);
+    }
+
+    return ok(id, {
+      content: [{ type: "text", text: JSON.stringify(resultData, null, 2) }],
+    });
+
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return ok(id, {
+      content: [{ type: "text", text: `Error: ${msg}` }],
+      isError: true,
+    });
   }
 }
 

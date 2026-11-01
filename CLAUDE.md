@@ -121,6 +121,7 @@ This enables prompt caching on providers (Anthropic, OpenAI) and reduces token c
 - Presets (`templates/`) are sugar — they build prompts, call the core, and parse responses
 - `mcp.ts` exposes all presets as MCP tools (Streamable HTTP transport)
 - No streaming, no tool calling, no audio — this is a batch processing gateway
+- Observability: `observability.ts` tags every OpenRouter call with the preset (`user`, `trace`, `session_id` from the `x-session-id` header) for OpenRouter Broadcast. New direct `fetch` calls to OpenRouter must spread `...openRouterTraceFields()` into the body; calls through `OpenRouterProvider` get it for free
 
 ### Model Chain Resolution (3-tier)
 

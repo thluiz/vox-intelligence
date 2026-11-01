@@ -1,4 +1,5 @@
 import type { AIProvider, ChatCompletionRequest, ChatCompletionResponse, ChatMessage, ContentPart } from "../types";
+import { openRouterTraceFields } from "../observability";
 
 function formatMessages(messages: ChatMessage[]): unknown[] {
   return messages.map((msg) => {
@@ -37,6 +38,8 @@ export class OpenRouterProvider implements AIProvider {
     const body: Record<string, unknown> = {
       model: req.model,
       messages: formatMessages(req.messages),
+      // Broadcast tags (preset, session); {} outside a request context.
+      ...openRouterTraceFields(),
     };
 
     if (isReasoning) {
