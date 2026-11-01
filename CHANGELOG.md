@@ -2,6 +2,19 @@
 
 All notable changes to vox-intelligence are documented in this file.
 
+## [1.3.0] — 2026-11-01
+
+### Modelos Anthropic na frente de cada cadeia
+
+A conta do OpenRouter ganhou uma chave Anthropic (BYOK): os modelos `anthropic/*` saem pela conta Anthropic com a mesma `OPENROUTER_API_KEY`. Cada cadeia ganhou um Claude na frente; os modelos que já atendiam continuam atrás, na mesma ordem.
+
+- **Opus 5.5** na frente de `ghost-audit`, `etymology-note`, `quote-note` e do diálogo holográfico
+- **Sonnet 5.5** na frente de `webclip-summary`, `suggest-annotations` e da cadeia global (`config.ts`; em produção, `DEFAULT_MODELS` no `.env`)
+- **Haiku 5.5** na frente do `extract-bookmarks` (visão)
+- **Diálogo holográfico**: o fallback `anthropic/claude-opus-4-5` (com hífen) não existe no OpenRouter e nunca respondeu; corrigido para `claude-opus-4.5`
+- **`run-fixtures.ts`**: `FIXTURE_MODEL` fixa o modelo nas chamadas, para avaliar uma troca antes de mexer em `PRESET_MODELS`. As 8 fixtures do ghost-audit passaram com `claude-opus-5.5`
+- A transcrição de voz não muda: os modelos Anthropic não recebem áudio
+
 ## [1.2.0] — 2026-09-25
 
 ### Uma língua só por nota

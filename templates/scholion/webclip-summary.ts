@@ -71,7 +71,7 @@ export interface WebclipSummaryResult {
 
 // Same chain the quote-note preset settled on: gpt-5.4 has been the reliable
 // source-or-silence performer for Scholion prose composition, gpt-5.2 as fallback.
-const PRESET_MODELS = ["openrouter/openai/gpt-5.4", "openrouter/openai/gpt-5.2"];
+const PRESET_MODELS = ["openrouter/anthropic/claude-sonnet-5.5", "openrouter/openai/gpt-5.4", "openrouter/openai/gpt-5.2"];
 
 const SYSTEM_PROMPT = `Você compõe o CONTEÚDO de UMA nota "webclip" do Scholion a partir do TEXTO BRUTO de uma página capturada. Você NÃO formata frontmatter/YAML nem monta "sources" — devolve apenas um objeto JSON com os campos. NÃO É análise autoral: é fichamento, síntese do que a página diz.
 

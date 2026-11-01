@@ -19,7 +19,7 @@ export function loadConfig(): Config {
     openaiApiKey: process.env.OPENAI_API_KEY || "",
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
     deepseekApiKey: process.env.DEEPSEEK_API_KEY || "",
-    defaultModels: (process.env.DEFAULT_MODELS || "openrouter/openai/gpt-5.2,openrouter/anthropic/claude-opus-4.5,openrouter/deepseek/deepseek-v3.2")
+    defaultModels: (process.env.DEFAULT_MODELS || "openrouter/anthropic/claude-sonnet-5.5,openrouter/openai/gpt-5.2,openrouter/anthropic/claude-opus-4.5,openrouter/deepseek/deepseek-v3.2")
       .split(",")
       .map(m => m.trim())
       .filter(Boolean),

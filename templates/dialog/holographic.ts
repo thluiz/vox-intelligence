@@ -215,7 +215,7 @@ export async function handleHolographicDialog(
   const fm = (episode.frontmatter as Record<string, unknown>) || {};
   const lang = (fm.lang as string) || "pt";
 
-  const presetDefaults = ["openrouter/openai/gpt-4.1", "openrouter/anthropic/claude-opus-4-5"];
+  const presetDefaults = ["openrouter/anthropic/claude-opus-5.5", "openrouter/openai/gpt-4.1", "openrouter/anthropic/claude-opus-4.5"];
   const modelChain = resolveModelChain(req.model, req.fallbackModels, presetDefaults, config.defaultModels);
   const primaryModel = modelChain[0];
   const parsed = parseModelString(primaryModel);

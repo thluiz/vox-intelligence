@@ -226,7 +226,7 @@ export async function handleGhostAudit(
   // source-or-silence (the gravest Scholion violation). opus-4.5 as fallback.
   // Callers can still override via req.model / req.fallbackModels.
   // strict mode runs the first two chain entries independently and unions.
-  const PRESET_MODELS = ["openrouter/openai/gpt-5.2", "openrouter/anthropic/claude-opus-4.5"];
+  const PRESET_MODELS = ["openrouter/anthropic/claude-opus-5.5", "openrouter/openai/gpt-5.2", "openrouter/anthropic/claude-opus-4.5"];
   const modelChain = resolveModelChain(req.model, req.fallbackModels, PRESET_MODELS, config.defaultModels);
   const deadline = req.timeoutMs ? Date.now() + req.timeoutMs : undefined;
 

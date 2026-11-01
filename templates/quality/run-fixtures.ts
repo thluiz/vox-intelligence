@@ -7,6 +7,8 @@
 //   bun templates/quality/run-fixtures.ts [baseUrl]
 // Default baseUrl: http://localhost:8004 (direct). Via nginx from Windows:
 //   bun templates/quality/run-fixtures.ts http://localhost:8080/api/vox-intelligence
+// Pin a model (test a swap without touching PRESET_MODELS):
+//   FIXTURE_MODEL=openrouter/anthropic/claude-opus-5.5 bun templates/quality/run-fixtures.ts
 
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -20,6 +22,8 @@ interface Expectation {
 }
 
 const baseUrl = (process.argv[2] || "http://localhost:8004").replace(/\/$/, "");
+// Optional: FIXTURE_MODEL=openrouter/... pins the model, to evaluate a swap before editing PRESET_MODELS.
+const fixtureModel = process.env.FIXTURE_MODEL;
 const fixturesDir = join(dirname(new URL(import.meta.url).pathname), "fixtures");
 const expectations: Expectation[] = JSON.parse(
   readFileSync(join(fixturesDir, "expected.json"), "utf-8"),
@@ -36,7 +40,7 @@ for (const exp of expectations) {
     const res = await fetch(`${baseUrl}/presets/scholion/ghost-audit`, {
       method: "POST",
       headers: { "Content-Type": "application/json; charset=utf-8" },
-      body: JSON.stringify({ content, slug: `fixture/${exp.file}` }),
+      body: JSON.stringify({ content, slug: `fixture/${exp.file}`, ...(fixtureModel ? { model: fixtureModel } : {}) }),
     });
     if (!res.ok) {
       console.log(`✗ ${exp.file} — HTTP ${res.status}: ${await res.text()}`);

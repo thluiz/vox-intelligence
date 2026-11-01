@@ -40,7 +40,7 @@ export interface SuggestAnnotationsResult {
   };
 }
 
-const PRESET_MODELS = ["openrouter/openai/gpt-5.2", "openrouter/google/gemini-2.5-flash"];
+const PRESET_MODELS = ["openrouter/anthropic/claude-sonnet-5.5", "openrouter/openai/gpt-5.2", "openrouter/google/gemini-2.5-flash"];
 
 const SYSTEM_PROMPT_PT = `Você é um analista editorial de podcasts. Recebe o transcript completo de um episódio e deve identificar quantos momentos forem genuinamente dignos de anotação permanente — a quantidade depende inteiramente da riqueza do episódio: pode ser 1, pode ser 30. Não force um mínimo nem um máximo artificial.
 

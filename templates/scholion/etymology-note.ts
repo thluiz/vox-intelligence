@@ -52,7 +52,7 @@ export interface EtymologyNoteResult {
 // hallucinates glosses/attributions in this task. Author picked gpt-5.4
 // (2026-07-07) — successor of the gpt-5.2 his ghost-audit testing validated
 // for source-or-silence. gpt-5.2 as fallback.
-const PRESET_MODELS = ["openrouter/openai/gpt-5.4", "openrouter/openai/gpt-5.2"];
+const PRESET_MODELS = ["openrouter/anthropic/claude-opus-5.5", "openrouter/openai/gpt-5.4", "openrouter/openai/gpt-5.2"];
 
 const SYSTEM_PROMPT = `Você é um filólogo que redige UMA nota de etimologia de caractere chinês para o Scholion, em PORTUGUÊS BRASILEIRO, a partir de DADOS BRUTOS de 7 fontes. Replique EXATAMENTE o formato do MODELO fornecido (mesmas seções ####, tabela de evolução, bloco de fonologia, seção final "Divergências entre fontes").
 

@@ -78,7 +78,7 @@ export interface QuoteNoteResult {
 }
 
 // Same source-or-silence-validated chain the etymology-note preset settled on.
-const PRESET_MODELS = ["openrouter/openai/gpt-5.4", "openrouter/openai/gpt-5.2"];
+const PRESET_MODELS = ["openrouter/anthropic/claude-opus-5.5", "openrouter/openai/gpt-5.4", "openrouter/openai/gpt-5.2"];
 
 const SYSTEM_PROMPT = `Você compõe o CONTEÚDO de UMA nota de citação verificada para o Scholion, em PORTUGUÊS BRASILEIRO, a partir de uma FRASE, um AUTOR PRESUMIDO e um CONTEXTO DE PESQUISA de autoria. Você NÃO formata markdown nem YAML — devolve apenas um objeto JSON com os campos. A citação é o title; o body traz APENAS o contexto de autoria (quem disse, onde, quando).
 
