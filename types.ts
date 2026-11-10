@@ -29,6 +29,9 @@ export interface ChatCompletionRequest {
   // fallback chain. Lets a caller with its own short HTTP timeout make the
   // upstream call give up too, instead of leaving it running orphaned.
   deadline?: number;
+  // Labels a secondary call inside a preset (e.g. "verify") in the OpenRouter
+  // Broadcast trace. Metadata only: never reaches the prompt.
+  traceStep?: string;
 }
 
 export interface ChatMessage {
@@ -118,6 +121,14 @@ export interface OpenAIChatResponse {
     completion_tokens: number;
     total_tokens: number;
   };
+  // podcast/episode only: outcome of the fact-check pass over the summary.
+  "x-verification"?: {
+    status: "clean" | "repaired" | "unverified" | "skipped";
+    issues: number;
+    repaired: number;
+    model?: string;
+    reason?: string;
+  };
 }
 
 // Preset types
@@ -135,6 +146,8 @@ export interface PodcastEpisodeRequest {
   bookmarks?: string[];
   model?: string;
   fallbackModels?: string[];
+  // false skips the fact-check pass (default: verify).
+  verify?: boolean;
 }
 
 export interface RecommendationItem {

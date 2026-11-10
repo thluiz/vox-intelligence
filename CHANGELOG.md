@@ -2,6 +2,20 @@
 
 All notable changes to vox-intelligence are documented in this file.
 
+## [1.5.0] — 2026-11-10
+
+### Resumo de episódio com modelo barato e verificação
+
+O `podcast/episode` respondia por quase todo o gasto com Sonnet 5.5 (cerca de 300 resumos por semana, 31k tokens de entrada cada, sem prefixo reaproveitável para cache). Em teste com 5 episódios e juiz às cegas, o DeepSeek V4 Pro sozinho custou um terço mas cometeu erro grave de leitura; com uma passada de verificação pelo Haiku 5.5 os erros graves sumiram e o custo ficou em 40% do Sonnet. A cobertura do DeepSeek continua menor que a do Sonnet (timelines mais curtas): a verificação tira erro, não acrescenta conteúdo.
+
+- **Cadeia própria do preset**: `deepseek-v4-pro` → `claude-sonnet-5.5` → `gpt-5.2`. O preset deixa de herdar `DEFAULT_MODELS`. Resposta que não é JSON válido também passa ao modelo seguinte, e um modelo que não é o último tem 7 minutos antes de a cadeia seguir
+- **Prompt com regras de ancoragem**: nomes como estão no transcript, nada de conhecimento externo, falante só quando o transcript deixa claro, piada e analogia não viram fato, timestamps copiados sem arredondar
+- **Verificação** (`claude-haiku-5.5`): lê o transcript e o resumo e lista cada afirmação sem apoio, com a citação. Precisa ser de família diferente do modelo que resumiu: o V4 Pro verificando o próprio resumo deixou passar os dois erros graves do teste
+- **Conserto** (`claude-haiku-5.5`, sem o transcript): remove ou neutraliza os itens de severidade alta e média. Só altera `description`, `participants`, `summary`, `timeline` e `recommendations`; não pode criar timestamp nem cortar mais da metade do texto, senão é descartado
+- **Se a verificação ou o conserto falharem** e o resumo veio do primeiro modelo, o resumo é refeito com o seguinte da cadeia em vez de sair sem verificação
+- **Resposta**: campo novo `x-verification` (`status`: `clean`, `repaired`, `unverified` ou `skipped`; `issues`; `repaired`). O `x-parsed` não ganhou campos. `verify: false` no corpo pula a passada
+- **Traces**: `ChatCompletionRequest.traceStep` marca as chamadas de verificação e conserto como `step: "verify"` e `step: "repair"` no Broadcast do OpenRouter
+
 ## [1.4.0] — 2026-11-01
 
 ### Chamadas ao OpenRouter marcadas por preset

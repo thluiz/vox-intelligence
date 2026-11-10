@@ -17,7 +17,7 @@ vox-intelligence exposes an MCP server at `POST /mcp` (Streamable HTTP transport
 | `POST /mcp` | MCP JSON-RPC 2.0 (single or batch requests) |
 | `GET /mcp` | SSE keep-alive (minimal, for clients that need it) |
 | `POST /v1/chat/completions` | OpenAI-compatible chat API |
-| `POST /presets/podcast/episode` | Podcast episode preset (HTTP direct) |
+| `POST /presets/podcast/episode` | Podcast episode preset (HTTP direct). Own model chain (cheap model first), then a fact-check pass by a different model family that repairs unsupported claims; outcome in `x-verification`. Body accepts `verify: false` to skip it. Changing the first model or the verifier: re-run a blind comparison first, see CHANGELOG 1.5.0 |
 | `POST /presets/podcast/annotate` | Podcast annotate preset (HTTP direct) |
 | `POST /presets/vision/extract-bookmarks` | Vision preset (HTTP direct) |
 | `POST /presets/scholion/ghost-audit` | Ghost-writer voice audit for Scholion notes (HTTP direct). Body: `{content, slug?, strict?}`. Regression eval: `bun templates/quality/run-fixtures.ts` |

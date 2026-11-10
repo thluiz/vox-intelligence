@@ -39,7 +39,7 @@ export class OpenRouterProvider implements AIProvider {
       model: req.model,
       messages: formatMessages(req.messages),
       // Broadcast tags (preset, session); {} outside a request context.
-      ...openRouterTraceFields(),
+      ...openRouterTraceFields(req.traceStep),
     };
 
     if (isReasoning) {
