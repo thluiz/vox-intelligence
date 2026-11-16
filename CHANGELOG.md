@@ -2,6 +2,13 @@
 
 All notable changes to vox-intelligence are documented in this file.
 
+## [1.8.0] — 2026-11-16
+
+### Sem travessão nas anotações; constantes acompanham a tabela
+
+- **`dashes.ts`**: `stripDashes` troca travessão (e meia-risca usada como travessão) por vírgula e limpa a pontuação que sobra; intervalos numéricos com meia-risca (`1990–2000`) ficam. O `podcast/annotate` passa `title` e `description` por ele; `key_quotes` continuam literais. No teste de 2026-11-16 os GPT puseram travessão em ~40% das anotações, que saem publicadas no Vox, onde não há ghost-audit
+- **Constantes de reserva** (valem só com o Toscanini fora): `suggest-annotations` e `annotate` com `gpt-5.1` → `gpt-5.2`; `webclip-summary` com `gpt-5.1` → `gpt-5.4-mini`, espelhando o perfil `third-party`
+
 ## [1.7.0] — 2026-11-16
 
 ### Cadeias de modelos vêm do Toscanini
