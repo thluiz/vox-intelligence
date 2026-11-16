@@ -89,7 +89,9 @@ export async function handlePodcastAnnotate(
     { role: "user", content: buildUserPrompt(req) },
   ];
 
-  const modelChain = resolveModelChain(req.model, req.fallbackModels, undefined, config.defaultModels);
+  // Own chain, not the global one: DeepSeek and Gemini Flash lost coverage on
+  // annotations (Toscanini v0.2.20), and the global chain starts with DeepSeek.
+  const modelChain = resolveModelChain(req.model, req.fallbackModels, ["openrouter/openai/gpt-5.2", "openrouter/openai/gpt-5.1"], config.defaultModels);
 
   const result = await factory.completeWithFallback(
     {

@@ -13,7 +13,6 @@ import { ProviderFactory } from "../../providers/provider";
 // after the verification pass below. The others are the quality fallbacks.
 const PRESET_MODELS = [
   "openrouter/deepseek/deepseek-v4-pro",
-  "openrouter/anthropic/claude-sonnet-5.5",
   "openrouter/openai/gpt-5.2",
 ];
 

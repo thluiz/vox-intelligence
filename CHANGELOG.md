@@ -2,6 +2,22 @@
 
 All notable changes to vox-intelligence are documented in this file.
 
+## [1.6.0] — 2026-11-16
+
+### Cadeias sem Anthropic onde há substituto de terceiro
+
+Volta a maioria dos presets às cadeias que rodavam antes do 1.3 (Anthropic na frente via BYOK), por custo. Ficam com Anthropic só os casos em que o substituto sai mais caro ou ainda não foi testado.
+
+- **`podcast/suggest-annotations`**: `gpt-5.2` → `gpt-5.1` → `gemini-2.5-flash`. DeepSeek e Gemini Flash na frente já perderam cobertura neste preset (Toscanini v0.2.20)
+- **`podcast/annotate`**: ganha cadeia própria, `gpt-5.2` → `gpt-5.1`, em vez de herdar `DEFAULT_MODELS`, que agora começa pelo DeepSeek
+- **`podcast/episode`**: sai o `claude-sonnet-5.5` do meio da cadeia (`deepseek-v4-pro` → `gpt-5.2`). A verificação continua no `claude-haiku-5.5`, o mais barato de família diferente do DeepSeek
+- **`scholion/quote-note`** e **`scholion/etymology-note`**: `gpt-5.4` → `gpt-5.2`
+- **`quality/ghost-audit`**: `gpt-5.2` → `gpt-5.4`. As fixtures (`run-fixtures.ts`) ainda não rodaram com essa cadeia
+- **`dialog/holographic`**: `gpt-4.1` → `gpt-5.4`
+- **`vision/extract-bookmarks`**: `gemini-2.5-flash-lite` → `gpt-4o-mini`. Sai também o `claude-sonnet-4`, retirado do OpenRouter
+- **`DEFAULT_MODELS`** (cadeia global): `deepseek-v3.2` → `gpt-5.2`. Herdam essa cadeia `meetings/summarize-master-course`, `transcribe/voice` e o `chat` do MCP
+- **Sem mudança**: `scholion/webclip-summary` segue com `claude-sonnet-5.5` na frente; a alternativa antiga (`gpt-5.4`) custa mais
+
 ## [1.5.0] — 2026-11-10
 
 ### Resumo de episódio com modelo barato e verificação
