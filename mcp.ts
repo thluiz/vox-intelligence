@@ -15,6 +15,7 @@
 import type { ProviderFactory } from "./providers/provider";
 import type { Config } from "./config";
 import { resolveModelChain } from "./types";
+import { presetChain, globalChain } from "./routing";
 import { handlePodcastEpisode } from "./templates/podcasts/episode";
 import { handlePodcastAnnotate } from "./templates/podcasts/annotate";
 import { handleExtractBookmarks } from "./templates/vision/extract-bookmarks";
@@ -407,7 +408,7 @@ async function callTool(
         args.model as string | undefined,
         args.fallbackModels as string[] | undefined,
         undefined,
-        config.defaultModels,
+        await globalChain(config.defaultModels),
       );
       const result = await factory.completeWithFallback(
         {

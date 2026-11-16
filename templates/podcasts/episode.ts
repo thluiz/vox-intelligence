@@ -6,6 +6,7 @@ import type {
   OpenAIChatResponse,
 } from "../../types";
 import { resolveModelChain } from "../../types";
+import { presetChain, globalChain } from "../../routing";
 import type { Config } from "../../config";
 import { ProviderFactory } from "../../providers/provider";
 
@@ -361,7 +362,7 @@ async function verifyAndRepair(
       maxTokens: config.maxOutputTokens,
       traceStep: "verify",
     },
-    VERIFY_MODELS,
+    await presetChain("podcast/episode-verify", VERIFY_MODELS),
   );
   let usage: Usage = verify.usage;
 
@@ -394,7 +395,7 @@ async function verifyAndRepair(
       maxTokens: config.maxOutputTokens,
       traceStep: "repair",
     },
-    VERIFY_MODELS,
+    await presetChain("podcast/episode-verify", VERIFY_MODELS),
   );
   usage = addUsage(usage, repair.usage);
 
@@ -415,7 +416,7 @@ export async function handlePodcastEpisode(
     { role: "user", content: buildUserPrompt(req) },
   ];
 
-  const modelChain = resolveModelChain(req.model, req.fallbackModels, PRESET_MODELS, config.defaultModels);
+  const modelChain = resolveModelChain(req.model, req.fallbackModels, await presetChain("podcast/episode", PRESET_MODELS), await globalChain(config.defaultModels));
 
   let generated = await generate(messages, modelChain, 0, factory, config);
   let usage = generated.usage;

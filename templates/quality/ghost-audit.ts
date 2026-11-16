@@ -3,6 +3,7 @@ import type {
   OpenAIChatResponse,
 } from "../../types";
 import { resolveModelChain } from "../../types";
+import { presetChain, globalChain } from "../../routing";
 import type { Config } from "../../config";
 import { ProviderFactory } from "../../providers/provider";
 
@@ -227,7 +228,7 @@ export async function handleGhostAudit(
   // Callers can still override via req.model / req.fallbackModels.
   // strict mode runs the first two chain entries independently and unions.
   const PRESET_MODELS = ["openrouter/openai/gpt-5.2", "openrouter/openai/gpt-5.4"];
-  const modelChain = resolveModelChain(req.model, req.fallbackModels, PRESET_MODELS, config.defaultModels);
+  const modelChain = resolveModelChain(req.model, req.fallbackModels, await presetChain("quality/ghost-audit", PRESET_MODELS), await globalChain(config.defaultModels));
   const deadline = req.timeoutMs ? Date.now() + req.timeoutMs : undefined;
 
   const runOnce = async (chain: string[]): Promise<AuditRun> => {

@@ -8,6 +8,7 @@ import type {
   ExtractBookmarksResult,
 } from "../../types";
 import { resolveModelChain } from "../../types";
+import { presetChain, globalChain } from "../../routing";
 
 const SYSTEM_PROMPT = `You are an OCR assistant that extracts timestamps from podcast player screenshots.
 
@@ -92,7 +93,7 @@ export async function handleExtractBookmarks(
 ): Promise<{ response: { content: string; model: string }; parsed: ExtractBookmarksResult }> {
   const messages = buildMessages(req.images);
 
-  const modelChain = resolveModelChain(req.model, req.fallbackModels, DEFAULT_VISION_MODELS, config.defaultModels);
+  const modelChain = resolveModelChain(req.model, req.fallbackModels, await presetChain("vision/extract-bookmarks", DEFAULT_VISION_MODELS), await globalChain(config.defaultModels));
 
   const result = await factory.completeWithFallback(
     {

@@ -2,6 +2,18 @@
 
 All notable changes to vox-intelligence are documented in this file.
 
+## [1.7.0] — 2026-11-16
+
+### Cadeias de modelos vêm do Toscanini
+
+A cadeia de cada preset passa a vir da tabela de roteamento do Toscanini (`Toscanini.ModelRouting`, perfis `anthropic` e `third-party`). Trocar de perfil não exige mais editar código nem reiniciar este serviço.
+
+- **`routing.ts`**: `presetChain(key, constante)` e `globalChain(constante)`. Lê `GET /api/orchestrator/model-routing/resolved` (URL em `MODEL_ROUTING_URL`), com cache de 60 s e uma única requisição por vez. Se o Toscanini não responde, continua com a última tabela boa; sem nenhuma, usa a constante do preset, que espelha o perfil `third-party`
+- **Chaves**: `podcast/episode`, `podcast/episode-verify`, `podcast/suggest-annotations`, `podcast/annotate`, `scholion/webclip-summary`, `scholion/quote-note`, `scholion/etymology-note`, `quality/ghost-audit`, `dialog/holographic`, `vision/extract-bookmarks`, `meetings/summarize-master-course` e `default` (cadeia global, usada pelo `chat` do MCP). `model`/`fallbackModels` no corpo da requisição continuam tendo prioridade
+- **Endpoints**: `GET /routing` mostra a origem (`toscanini` ou `preset-constants`), o perfil e as cadeias; `POST /routing/refresh` larga o cache (o Toscanini chama a cada mudança)
+- **Fora da troca**: `transcribe/voice`, que precisa de modelo de áudio
+- **Testes**: `routing.test.ts` (`bun test`), os primeiros do serviço
+
 ## [1.6.0] — 2026-11-16
 
 ### Cadeias sem Anthropic onde há substituto de terceiro

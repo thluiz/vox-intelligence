@@ -1,3 +1,4 @@
+import { refreshRouting, routingStatus } from "./routing";
 import { loadConfig } from "./config";
 import { ProviderFactory, parseModelString } from "./providers/provider";
 import { handlePodcastEpisode } from "./templates/podcasts/episode";
@@ -226,6 +227,16 @@ async function route(req: Request): Promise<Response> {
         providers,
         defaultModels: config.defaultModels,
       });
+    }
+
+    // Model routing (owned by Toscanini). GET shows what the presets will use;
+    // POST /routing/refresh is called by Toscanini after every change.
+    if (path === "/routing" && req.method === "GET") {
+      return jsonResponse(await routingStatus());
+    }
+    if (path === "/routing/refresh" && req.method === "POST") {
+      refreshRouting();
+      return jsonResponse({ ok: true, ...(await routingStatus()) });
     }
 
     // Generic chat completions (OpenAI-compatible)

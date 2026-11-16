@@ -24,6 +24,7 @@
 
 import type { ChatMessage } from "../../types";
 import { resolveModelChain } from "../../types";
+import { presetChain, globalChain } from "../../routing";
 import type { Config } from "../../config";
 import { ProviderFactory } from "../../providers/provider";
 
@@ -262,7 +263,7 @@ export async function handleWebclipSummary(
     { role: "user", content: buildUserPrompt(req) },
   ];
 
-  const modelChain = resolveModelChain(req.model, req.fallbackModels, PRESET_MODELS, config.defaultModels);
+  const modelChain = resolveModelChain(req.model, req.fallbackModels, await presetChain("scholion/webclip-summary", PRESET_MODELS), await globalChain(config.defaultModels));
   const deadline = req.timeoutMs ? Date.now() + req.timeoutMs : undefined;
 
   const result = await factory.completeWithFallback(

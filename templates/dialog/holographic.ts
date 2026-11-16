@@ -13,6 +13,7 @@
 
 import type { ChatMessage } from "../../types";
 import { resolveModelChain } from "../../types";
+import { presetChain, globalChain } from "../../routing";
 import type { Config } from "../../config";
 import { ProviderFactory, parseModelString } from "../../providers/provider";
 import { openRouterTraceFields } from "../../observability";
@@ -218,7 +219,7 @@ export async function handleHolographicDialog(
   const lang = (fm.lang as string) || "pt";
 
   const presetDefaults = ["openrouter/openai/gpt-4.1", "openrouter/openai/gpt-5.4"];
-  const modelChain = resolveModelChain(req.model, req.fallbackModels, presetDefaults, config.defaultModels);
+  const modelChain = resolveModelChain(req.model, req.fallbackModels, await presetChain("dialog/holographic", presetDefaults), await globalChain(config.defaultModels));
   const primaryModel = modelChain[0];
   const parsed = parseModelString(primaryModel);
 

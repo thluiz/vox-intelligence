@@ -3,6 +3,7 @@ import type {
   OpenAIChatResponse,
 } from "../../types";
 import { resolveModelChain } from "../../types";
+import { presetChain, globalChain } from "../../routing";
 import type { Config } from "../../config";
 import { ProviderFactory } from "../../providers/provider";
 
@@ -178,7 +179,7 @@ export async function handleMeetingSummarize(
   ];
 
   // Own chain, not the global one (which starts with DeepSeek).
-  const modelChain = resolveModelChain(req.model, req.fallbackModels, ["openrouter/openai/gpt-5.2", "openrouter/openai/gpt-5.1"], config.defaultModels);
+  const modelChain = resolveModelChain(req.model, req.fallbackModels, await presetChain("meetings/summarize-master-course", ["openrouter/openai/gpt-5.2", "openrouter/openai/gpt-5.1"]), await globalChain(config.defaultModels));
 
   const result = await factory.completeWithFallback(
     {

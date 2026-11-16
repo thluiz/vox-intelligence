@@ -3,6 +3,7 @@ import type {
   OpenAIChatResponse,
 } from "../../types";
 import { resolveModelChain } from "../../types";
+import { presetChain, globalChain } from "../../routing";
 import type { Config } from "../../config";
 import { ProviderFactory } from "../../providers/provider";
 
@@ -238,8 +239,8 @@ export async function handleSuggestAnnotations(
   const modelChain = resolveModelChain(
     req.model,
     req.fallbackModels,
-    PRESET_MODELS,
-    config.defaultModels,
+    await presetChain("podcast/suggest-annotations", PRESET_MODELS),
+    await globalChain(config.defaultModels),
   );
 
   const result = await factory.completeWithFallback(

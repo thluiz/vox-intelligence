@@ -13,6 +13,7 @@
 
 import type { ChatMessage } from "../../types";
 import { resolveModelChain } from "../../types";
+import { presetChain, globalChain } from "../../routing";
 import type { Config } from "../../config";
 import { ProviderFactory } from "../../providers/provider";
 import { openRouterTraceFields } from "../../observability";
@@ -302,7 +303,7 @@ export async function handleQuoteNote(
     { role: "user", content: buildUserPrompt(req, searchContext, book) },
   ];
 
-  const modelChain = resolveModelChain(req.model, req.fallbackModels, PRESET_MODELS, config.defaultModels);
+  const modelChain = resolveModelChain(req.model, req.fallbackModels, await presetChain("scholion/quote-note", PRESET_MODELS), await globalChain(config.defaultModels));
 
   const result = await factory.completeWithFallback(
     { model: "", messages, maxTokens: config.maxOutputTokens, temperature: 0.2 },
