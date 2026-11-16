@@ -28,7 +28,6 @@ const DEFAULT_VISION_MODELS = [
   "openrouter/anthropic/claude-haiku-5.5",
   "openrouter/google/gemini-2.5-flash-lite",
   "openrouter/openai/gpt-4o-mini",
-  "openrouter/anthropic/claude-sonnet-4",
 ];
 
 function detectMediaType(base64: string): ImageContentPart["mediaType"] {
