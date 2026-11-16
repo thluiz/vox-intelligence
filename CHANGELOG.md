@@ -15,7 +15,8 @@ Volta a maioria dos presets às cadeias que rodavam antes do 1.3 (Anthropic na f
 - **`quality/ghost-audit`**: `gpt-5.2` → `gpt-5.4`. As fixtures (`run-fixtures.ts`) ainda não rodaram com essa cadeia
 - **`dialog/holographic`**: `gpt-4.1` → `gpt-5.4`
 - **`vision/extract-bookmarks`**: `gemini-2.5-flash-lite` → `gpt-4o-mini`. Sai também o `claude-sonnet-4`, retirado do OpenRouter
-- **`DEFAULT_MODELS`** (cadeia global): `deepseek-v3.2` → `gpt-5.2`. Herdam essa cadeia `meetings/summarize-master-course`, `transcribe/voice` e o `chat` do MCP
+- **`DEFAULT_MODELS`** (cadeia global): `deepseek-v3.2` → `gpt-5.2`. Herda essa cadeia o `chat` do MCP. `transcribe/voice` tem lista própria de modelos de áudio
+- **`meetings/summarize-master-course`**: ganha cadeia própria, `gpt-5.2` → `gpt-5.1`, em vez de herdar `DEFAULT_MODELS`
 - **Sem mudança**: `scholion/webclip-summary` segue com `claude-sonnet-5.5` na frente; a alternativa antiga (`gpt-5.4`) custa mais
 
 ## [1.5.0] — 2026-11-10

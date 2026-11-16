@@ -177,7 +177,8 @@ export async function handleMeetingSummarize(
     { role: "user", content: buildUserPrompt(req) },
   ];
 
-  const modelChain = resolveModelChain(req.model, req.fallbackModels, undefined, config.defaultModels);
+  // Own chain, not the global one (which starts with DeepSeek).
+  const modelChain = resolveModelChain(req.model, req.fallbackModels, ["openrouter/openai/gpt-5.2", "openrouter/openai/gpt-5.1"], config.defaultModels);
 
   const result = await factory.completeWithFallback(
     {
