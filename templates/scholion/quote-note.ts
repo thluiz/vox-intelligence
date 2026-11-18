@@ -36,16 +36,55 @@ export interface QuoteNoteRequest {
 // Amazon / Kindle / short-link — strong signal that the quote came from a book.
 const BOOK_URL = /https?:\/\/(?:[a-z0-9-]+\.)?(?:amazon\.[a-z.]+|amzn\.[a-z.]+|amz\.onl|a\.co|kindle\.[a-z.]+|read\.amazon\.[a-z.]+)\/\S+/i;
 
-function detectBook(req: QuoteNoteRequest): { bookMode: boolean; bookUrl: string | null } {
+// A post on a social network: the post itself is a dated, attributable source.
+const SOCIAL_URL = /^https?:\/\/(?:[a-z0-9-]+\.)?(?:x\.com|twitter\.com|bsky\.app|threads\.net|threads\.com|mastodon\.[a-z.]+|linkedin\.com|instagram\.com|facebook\.com)\//i;
+
+const ANY_URL = /https?:\/\/[^\s"'<>()\[\]{}]+/gi;
+
+// Book mode only on an explicit signal: the fromBook flag or a book link.
+// A free-text context is NOT a book signal (until 1.6.0 any context switched
+// book mode on, and a tweet context made the model invent the "book" the
+// tweet came from — Berkopec → McBreen's Software Craftsmanship).
+export function detectBook(req: QuoteNoteRequest): { bookMode: boolean; bookUrl: string | null } {
   const bookUrl =
     (req.sourceUrl && req.sourceUrl.match(BOOK_URL)?.[0]) ||
     req.quote.match(BOOK_URL)?.[0] ||
     (req.context && req.context.match(BOOK_URL)?.[0]) ||
     null;
-  // Book mode when: an explicit flag/URL, a detected book link, OR a context
-  // that names a work (the caller asserting the source).
-  const bookMode = Boolean(req.fromBook || bookUrl || (req.context && req.context.trim()));
+  const bookMode = Boolean(req.fromBook || bookUrl);
   return { bookMode, bookUrl };
+}
+
+export function isSocialUrl(url: string | undefined | null): boolean {
+  return Boolean(url && SOCIAL_URL.test(url.trim()));
+}
+
+// Comparable form of a URL: no scheme, no www./mobile., twitter.com ≡ x.com,
+// no trailing slash or trailing punctuation, no query/fragment for social posts.
+export function urlKey(url: string): string {
+  let u = url.trim().replace(/[.,;:!?)\]}>"']+$/, "");
+  u = u.replace(/^https?:\/\//i, "").replace(/^(?:www\.|mobile\.)/i, "");
+  const slash = u.indexOf("/");
+  let host = (slash === -1 ? u : u.slice(0, slash)).toLowerCase();
+  let rest = slash === -1 ? "" : u.slice(slash);
+  if (host === "twitter.com") host = "x.com";
+  if (host === "x.com") rest = rest.replace(/[?#].*$/, "");
+  rest = rest.replace(/\/+$/, "");
+  return host + rest;
+}
+
+export function extractUrls(...texts: (string | undefined | null)[]): string[] {
+  const out: string[] = [];
+  for (const t of texts) if (t) for (const m of t.matchAll(ANY_URL)) out.push(m[0]);
+  return out;
+}
+
+// "Tweet de @handle" from an x.com/twitter.com status URL.
+export function socialSourceTitle(url: string): string {
+  const m = urlKey(url).match(/^x\.com\/([^/]+)\/status\//);
+  if (m) return `Tweet de @${m[1]}`;
+  const host = urlKey(url).split("/")[0];
+  return `Post em ${host}`;
 }
 
 // The title is the citation only — never a URL. Strip any book link the Kindle
@@ -75,6 +114,9 @@ export interface QuoteNoteResult {
   authorship: { verified: boolean; notes: string };
   // Deterministic lexical hits in the body (PT-EU, banned vocab). Non-fatal.
   lexicalWarnings: string[];
+  // What enforceProvenance changed (origin URL added, unconsulted URL dropped,
+  // work without a consulted source → verified=false). Non-fatal.
+  provenanceWarnings: string[];
   model: string;
   usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
 }
@@ -86,7 +128,11 @@ const SYSTEM_PROMPT = `Você compõe o CONTEÚDO de UMA nota de citação verifi
 
 REGRAS INEGOCIÁVEIS (valem para body e summary):
 - Source-or-silence: NUNCA invente atribuição, obra, data ou fonte. Só afirme o que o CONTEXTO DE PESQUISA ou o CONTEXTO FORNECIDO sustentam.
-- FONTE FORNECIDA PELO SOLICITANTE: se o CONTEXTO FORNECIDO nomeia uma obra de onde a citação foi extraída, essa obra É a fonte — inclua-a em sources e atribua a passagem a ela. A autoria está estabelecida pela proveniência informada: authorship.verified = true. Só use verified = false quando NÃO houver fonte fornecida E a pesquisa não fixar a autoria.
+- URL DE ORIGEM: se houver URL DE ORIGEM INFORMADA, ela entra SEMPRE em sources, com essa url exata. Ela é de onde a citação veio — nunca a omita nem a troque por outra.
+- POST DE REDE SOCIAL (tweet, post): se o CONTEXTO FORNECIDO diz que o post é do próprio autor presumido, o post É a fonte primária: source { title: "Tweet de @handle, <data>", author: <autor>, url: <url do post>, kind: "web" }, authorship.verified = true, e o body diz que o autor publicou a frase nesse post (com a data). Se o post é de OUTRA conta citando o autor presumido, ele é só onde a frase circulou: entra em sources, o body diz que a conta X atribuiu a frase ao autor, e a autoria depende da pesquisa (abaixo).
+- OBRA SÓ COM FONTE CONSULTADA: só atribua a frase a um livro, artigo, ensaio ou palestra se essa obra aparecer, ligada a ESSA frase, no CONTEXTO DE PESQUISA (com URL) ou no CONTEXTO FORNECIDO. Toda source além da URL de origem precisa ter url que aparece no CONTEXTO DE PESQUISA. Obra que você "conhece" mas a pesquisa não trouxe NÃO entra — nem em sources, nem no body, nem no summary. Sem fonte assim e sem post do próprio autor: authorship.verified = false, e o body diz apenas onde a frase foi encontrada.
+- FONTE FORNECIDA PELO SOLICITANTE: se o CONTEXTO FORNECIDO afirma que a citação foi extraída de uma obra e a nomeia, essa obra É a fonte — inclua-a em sources e atribua a passagem a ela, com authorship.verified = true. Mencionar onde a frase foi vista (um post, um site) NÃO é nomear a obra de origem.
+- O SOLICITANTE NÃO APARECE NA NOTA: nunca escreva "solicitante", "situado pelo solicitante", "segundo o solicitante", "informado pelo solicitante" nem atribua a quem pediu a nota qualquer afirmação. O que o CONTEXTO FORNECIDO diz entra como fato sobre a frase (onde e quando apareceu), sem dizer quem informou.
 - COM FONTE FORNECIDA, o body é CURTO (1–2 frases) e APENAS situa a citação: obra, autor, capítulo/contexto. PROIBIDO pôr a fonte em dúvida ou comentar "pesquisa de circulação", "comentário secundário", "não fixou testemunho", autenticidade da redação ou proveniência da tradução. Se a pesquisa trouxer dúvida, IGNORE.
 - WHITELIST do body: só pode conter autor, obra, ano e editora (SOMENTE se ancorados na pesquisa/contexto) e o capítulo/contexto da passagem. PROIBIDO mencionar edição, reedição, "2ª edição", "novo prefácio", reimpressão, tiragem, formato, volume ou ISBN (isso vai SÓ em sources, nunca como "esta passagem é da Nª edição"). E NUNCA afirme que o CONTEXTO FORNECIDO disse algo que ele não disse. O body termina ao situar a citação — sem frase de arremate.
 - SITUAR, NÃO REAFIRMAR: NÃO reexponha o conteúdo factual da própria citação (fatos, atribuições, datas dentro dela são do AUTOR CITADO e já estão no title). Se mencionar, atribua explicitamente ("Segundo X", "Na passagem, o autor observa que..."), nunca como asserção própria genérica.
@@ -101,14 +147,14 @@ CAMPOS DO JSON:
 - summary: ~150–200 chars situando a citação (quem disse, onde/quando, controvérsia de atribuição se houver).
 - tags: array de 2–4 strings kebab-case; a tag do autor é OBRIGATÓRIA.
 - has_commentary: boolean (false para excerto/contexto factual; true só se houver análise original).
-- sources: array; cada item { title (obrigatório), author?, year? (número), publisher?, url?, kind }. kind ∈ {book, article, wiki, podcast, video, paper, poem, repo, film, other}. NÃO fabricar URLs.
+- sources: array; cada item { title (obrigatório), author?, year? (número), publisher?, url?, kind }. kind ∈ {book, article, wiki, podcast, video, paper, poem, repo, film, web, other} (post de rede social e agregador de citações = web). NÃO fabricar URLs: só URLs que estão na URL DE ORIGEM, no CONTEXTO FORNECIDO ou no CONTEXTO DE PESQUISA.
 - body: prosa PT-BR que situa a citação (ver regras acima). NÃO repita a citação aqui.
 - authorship: { verified: boolean, notes: string (motivo curto quando verified=false, senão "") }.
 
 SAÍDA (CRÍTICO):
 - Responda APENAS com o objeto JSON válido. Sem texto antes/depois, sem cercas de código, sem markdown.`;
 
-function buildUserPrompt(
+export function buildUserPrompt(
   req: QuoteNoteRequest,
   searchContext: string,
   book: { bookMode: boolean; bookUrl: string | null },
@@ -119,8 +165,16 @@ function buildUserPrompt(
     "",
     `===== AUTOR PRESUMIDO ===== ${req.presumedAuthor || "(não informado)"}`,
   ];
+  const origin = req.sourceUrl?.trim();
+  if (origin) {
+    parts.push(
+      "",
+      "===== URL DE ORIGEM INFORMADA (entra SEMPRE em sources, url exata) =====",
+      origin + (isSocialUrl(origin) ? "  (post de rede social — ver regra POST DE REDE SOCIAL)" : ""),
+    );
+  }
   if (req.context && req.context.trim()) {
-    parts.push("", "===== CONTEXTO FORNECIDO PELO SOLICITANTE =====", req.context.trim());
+    parts.push("", "===== CONTEXTO FORNECIDO (fatos sobre a frase; NÃO citar quem informou) =====", req.context.trim());
   }
   if (book.bookMode) {
     parts.push(
@@ -161,27 +215,57 @@ async function webSearch(query: string, apiKey: string): Promise<string> {
     const text = await res.text().catch(() => "");
     throw new Error(`Perplexity search failed ${res.status}: ${text}`);
   }
-  const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-  return data.choices?.[0]?.message?.content || "(no results)";
+  const data = (await res.json()) as {
+    citations?: unknown[];
+    choices?: {
+      message?: {
+        content?: string;
+        annotations?: { type?: string; url_citation?: { url?: string; title?: string } }[];
+      };
+    }[];
+  };
+  const message = data.choices?.[0]?.message;
+  const content = message?.content || "(no results)";
+  // Perplexity puts the consulted URLs beside the text (citations /
+  // url_citation annotations), with only [n] markers inline. Append them, so
+  // the model can cite them and enforceProvenance sees them as consulted.
+  const cited: string[] = [];
+  for (const c of data.citations ?? []) if (typeof c === "string") cited.push(c);
+  for (const a of message?.annotations ?? []) {
+    const u = a.url_citation?.url;
+    if (u) cited.push(a.url_citation?.title ? `${u} (${a.url_citation.title})` : u);
+  }
+  const unique = [...new Set(cited)];
+  return unique.length
+    ? `${content}\n\nFONTES CONSULTADAS PELA PESQUISA:\n${unique.map((u, i) => `[${i + 1}] ${u}`).join("\n")}`
+    : content;
 }
 
-function buildSearchQuery(req: QuoteNoteRequest): string {
-  if (req.context && req.context.trim()) {
+export function buildSearchQuery(req: QuoteNoteRequest): string {
+  const { bookMode } = detectBook(req);
+  const context = req.context?.trim();
+  if (bookMode && context) {
     return (
       "Provide only verifiable BIBLIOGRAPHIC details (original title, author, year, " +
       "publisher) for the work described here: " +
-      `"${req.context}". Author: ${req.presumedAuthor || "unknown"}. ` +
+      `"${context}". Author: ${req.presumedAuthor || "unknown"}. ` +
       "Return concise facts with sources/URLs. Do NOT discuss misattribution or whether " +
       "the wording is authentic — the source is already established by the requester."
     );
   }
   const presumed = req.presumedAuthor ? ` It is often attributed to ${req.presumedAuthor}.` : "";
+  const seen = req.sourceUrl?.trim()
+    ? ` It was found at ${req.sourceUrl.trim()}${context ? ` (${context.slice(0, 400)})` : ""}.`
+    : context
+      ? ` Context: ${context.slice(0, 400)}.`
+      : "";
   return (
-    `Who originally said or wrote the quote: "${cleanQuote(req.quote)}"?${presumed} ` +
-    "Consult Quote Investigator (quoteinvestigator.com) and Wikiquote. " +
-    "Report: the earliest exact wording; the real author with the work, year and context; " +
-    "any well-known misattributions and how the misattribution spread. " +
-    "If no primary source pins the attribution, say so explicitly. Cite the sources (with URLs)."
+    `Who originally said or wrote the quote: "${cleanQuote(req.quote)}"?${presumed}${seen} ` +
+    "Consult Quote Investigator (quoteinvestigator.com), Wikiquote, Goodreads and the author's own " +
+    "books, essays and posts. Report: the earliest exact wording you can document; the work, year " +
+    "and context ONLY if a source you cite ties this wording to it; any well-known misattributions. " +
+    "If the earliest appearance is a social media post, say so. If no source ties the quote to a " +
+    "book or article, say so explicitly — do not guess a work. Cite every source with its URL."
   );
 }
 
@@ -211,9 +295,11 @@ function normalizeSlug(raw: string): string {
     .slice(0, 60);
 }
 
-type ParsedFields = Omit<QuoteNoteResult, "lexicalWarnings" | "model" | "usage">;
+type ParsedFields = Omit<QuoteNoteResult, "lexicalWarnings" | "provenanceWarnings" | "model" | "usage">;
 
-function parseFields(raw: string): ParsedFields {
+const MENTIONS_REQUESTER = /solicitante/i;
+
+export function parseFields(raw: string): ParsedFields {
   let text = raw.trim();
   // Strip code fences if the model wrapped the JSON.
   text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
@@ -247,6 +333,8 @@ function parseFields(raw: string): ParsedFields {
   if (tags.length === 0) errs.push("tags vazias (ao menos a tag do autor)");
   if (rawSources.length === 0) errs.push("sources vazio");
   if (typeof auth.verified !== "boolean") errs.push("authorship.verified ausente");
+  if (MENTIONS_REQUESTER.test(body) || MENTIONS_REQUESTER.test(summary))
+    errs.push("body/summary mencionam o solicitante (proibido: a nota não atribui nada a quem a pediu)");
 
   const sources: QuoteSource[] = rawSources
     .map((s) => {
@@ -279,6 +367,76 @@ function parseFields(raw: string): ParsedFields {
       notes: typeof auth.notes === "string" ? auth.notes.trim() : "",
     },
   };
+}
+
+// ---------- Deterministic provenance guard ----------
+
+const WORK_KINDS = new Set(["book", "article", "paper", "poem", "film", "podcast", "video"]);
+
+/**
+ * Enforces the provenance rules the prompt states, without trusting the model:
+ *  - the informed sourceUrl is always in sources (prepended if the model left it out);
+ *  - a source URL that appears nowhere in the input or the search context was not
+ *    consulted: the URL is dropped;
+ *  - a work (book, article…) with no consulted URL is an attribution without a
+ *    verifiable source: authorship.verified becomes false (Toscanini saves it as a
+ *    draft). In book mode the requester's book is exempt — it IS the source.
+ * Returns the fixed fields and the list of what was changed.
+ */
+export function enforceProvenance(
+  fields: ParsedFields,
+  req: QuoteNoteRequest,
+  searchContext: string,
+  book: { bookMode: boolean; bookUrl: string | null },
+): { fields: ParsedFields; warnings: string[] } {
+  const warnings: string[] = [];
+  const origin = req.sourceUrl?.trim() || null;
+  const consulted = new Set(
+    extractUrls(origin, req.context, req.quote, searchContext).map(urlKey),
+  );
+
+  let sources = fields.sources.map((s) => {
+    if (s.url && !consulted.has(urlKey(s.url))) {
+      warnings.push(`url não consultada removida de "${s.title}": ${s.url}`);
+      const { url: _drop, ...rest } = s;
+      return rest as QuoteSource;
+    }
+    return s;
+  });
+
+  if (origin && !sources.some((s) => s.url && urlKey(s.url) === urlKey(origin))) {
+    const social = isSocialUrl(origin);
+    const isBook = Boolean(book.bookUrl && urlKey(book.bookUrl) === urlKey(origin));
+    sources = [
+      {
+        title: social ? socialSourceTitle(origin) : isBook ? "Livro (link informado)" : "Fonte informada",
+        url: origin,
+        kind: isBook ? "book" : "web",
+      },
+      ...sources,
+    ];
+    warnings.push(`URL de origem ausente em sources; incluída: ${origin}`);
+  }
+
+  const unsourcedWorks = book.bookMode
+    ? []
+    : sources.filter((s) => WORK_KINDS.has(s.kind) && !s.url);
+
+  let authorship = fields.authorship;
+  if (unsourcedWorks.length > 0) {
+    const names = unsourcedWorks.map((s) => `"${s.title}"`).join(", ");
+    warnings.push(`obra sem fonte consultada: ${names}`);
+    if (authorship.verified) {
+      authorship = {
+        verified: false,
+        notes: [authorship.notes, `Atribuição a ${names} sem fonte consultada (URL); revisar.`]
+          .filter(Boolean)
+          .join(" "),
+      };
+    }
+  }
+
+  return { fields: { ...fields, sources, authorship }, warnings };
 }
 
 export async function handleQuoteNote(
@@ -345,9 +503,14 @@ export async function handleQuoteNote(
         : retry.usage ?? result.usage;
   }
 
+  const enforced = enforceProvenance(fields, req, searchContext, book);
+  if (enforced.warnings.length) console.log(`[quote-note] provenance: ${enforced.warnings.join(" | ")}`);
+  fields = enforced.fields;
+
   return {
     ...fields,
     lexicalWarnings: lexicalCheck(fields.body),
+    provenanceWarnings: enforced.warnings,
     model,
     usage: usage
       ? {

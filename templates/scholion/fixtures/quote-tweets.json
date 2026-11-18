@@ -1,0 +1,64 @@
+[
+  {
+    "name": "berkopec-own-tweet (regression: attributed to McBreen's Software Craftsmanship 'by the requester')",
+    "request": {
+      "quote": "\"Programmer as craftsman\" is a toxic ideology, prioritizing aesthetics and programmer desires over serving customers. I get paid for the things my software does, not how it does it.",
+      "presumedAuthor": "Nate Berkopec",
+      "sourceUrl": "https://x.com/nateberkopec/status/1248643404361355265",
+      "context": "Tweet de Nate Berkopec (@nateberkopec) em 2020-04-10 (https://x.com/nateberkopec/status/1248643404361355265). Texto original do tweet: \"Programmer as craftsman\" is a toxic ideology, prioritizing aesthetics and programmer desires over serving customers. I get paid for the things my software does, not how it does it."
+    },
+    "expect": {
+      "verified": true,
+      "forbidden": ["solicitante", "McBreen", "Software Craftsmanship: The New Imperative"]
+    }
+  },
+  {
+    "name": "unclebob-own-tweet (regression: attributed to Clean Code 2008)",
+    "request": {
+      "quote": "Not only does bad code slow you down NOW, it slows everyone who ever has to deal with it down, over, and over again. The cumulative slowing effects of bad code often become overwhelming.",
+      "presumedAuthor": "Robert C. Martin",
+      "sourceUrl": "https://x.com/unclebobmartin/status/1143592822974636033",
+      "context": "Tweet de Uncle Bob Martin (@unclebobmartin) em 2019-06-25 (https://x.com/unclebobmartin/status/1143592822974636033). Texto original do tweet: Not only does bad code slow you down NOW, it slows everyone who ever has to deal with it down, over, and over again. The cumulative slowing effects of bad code often become overwhelming."
+    },
+    "expect": {
+      "verified": true,
+      "forbidden": ["solicitante", "Clean Code"]
+    }
+  },
+  {
+    "name": "dailystoic-third-party (Epictetus: no work without a consulted source)",
+    "request": {
+      "quote": "Look to your own means, leave everything that isn't yours alone. Make use of what material advantages you have, don't regret the ones you were not allowed.",
+      "presumedAuthor": "Epictetus",
+      "sourceUrl": "https://x.com/dailystoic/status/1165714288436232194",
+      "context": "Tweet de Daily Stoic (@dailystoic) em 2019-08-25 (https://x.com/dailystoic/status/1165714288436232194). Texto original do tweet: \"Look to your own means, leave everything that isn't yours alone. Make use of what material advantages you have, don't regret the ones you were not allowed.\" —Epictetus"
+    },
+    "expect": {
+      "forbidden": ["solicitante"]
+    }
+  },
+  {
+    "name": "justsitthere-third-party (Brené Brown)",
+    "request": {
+      "quote": "Integrity: Choosing courage over comfort; choosing what is right over what is fun, fast, or easy; and choosing to practice our values rather than simply professing them.",
+      "presumedAuthor": "Brené Brown",
+      "sourceUrl": "https://x.com/justsitthere/status/1152416088484958210",
+      "context": "Tweet de @justsitthere em 2019-07-20 (https://x.com/justsitthere/status/1152416088484958210). Texto original do tweet: \"Integrity: Choosing courage over comfort; choosing what is right over what is fun, fast, or easy; and choosing to practice our values rather than simply professing them.\" - Brené Brown"
+    },
+    "expect": {
+      "forbidden": ["solicitante"]
+    }
+  },
+  {
+    "name": "codewisdom-third-party (Ellen Ullman)",
+    "request": {
+      "quote": "To be a programmer is to develop a carefully managed relationship with error. There's no getting around it. You either make your accommodations with failure, or the work will become intolerable.",
+      "presumedAuthor": "Ellen Ullman",
+      "sourceUrl": "https://x.com/CodeWisdom/status/1683142818695397378",
+      "context": "Tweet de Programming Wisdom (@CodeWisdom) em 2023-07-23 (https://x.com/CodeWisdom/status/1683142818695397378). Texto original do tweet: \"To be a programmer is to develop a carefully managed relationship with error. There's no getting around it. You either make your accommodations with failure, or the work will become intolerable.\" - Ellen Ullman"
+    },
+    "expect": {
+      "forbidden": ["solicitante"]
+    }
+  }
+]

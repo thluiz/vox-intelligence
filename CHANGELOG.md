@@ -2,6 +2,36 @@
 
 All notable changes to vox-intelligence are documented in this file.
 
+## [1.9.0] — 2026-11-18
+
+### quote-note: a fonte informada entra, obra só com fonte consultada
+
+Em 2026-11-17, 8 citações de tweets (`sourceUrl` = tweet, `context` = "Tweet de X (@h) em <data> (<url>). Texto
+original do tweet: ...") saíram atribuídas a livros sem evidência: Uncle Bob a Clean Code (2008), sem citar o tweet de
+2019; Nate Berkopec, num tweet próprio de 2020, "situado pelo solicitante como extraído do livro Software
+Craftsmanship, de Pete McBreen (2001)". Duas causas no preset: qualquer `context` não vazio ligava o MODO LIVRO ("a
+citação vem de um LIVRO, a fonte é DEFINITIVA"), e a busca pedia "bibliographic details for the work described here";
+o `sourceUrl` só entrava no prompt quando era link da Amazon.
+
+- **Modo livro só com sinal explícito** — `fromBook` ou link da Amazon/Kindle. Contexto livre não liga mais o modo; a
+  busca passa a perguntar quem disse a frase, mencionando onde ela foi encontrada, e a pedir que diga quando nenhuma
+  fonte a amarra a uma obra.
+- **Regras novas no prompt** — a URL de origem entra sempre em `sources`; post do próprio autor presumido é a fonte
+  primária (`Tweet de @handle, <data>`, `kind: web`, `verified: true`); post de outra conta é só onde a frase
+  circulou; obra só se a pesquisa a trouxe ligada à frase, com URL; o solicitante não aparece na nota. `kind` aceita
+  `web`.
+- **`enforceProvenance` (determinístico, depois do modelo)** — inclui o `sourceUrl` em `sources` se o modelo o
+  omitiu (título `Tweet de @handle` para x.com/twitter.com); remove URL de source que não aparece no input nem na
+  pesquisa; obra (`book`, `article`, `paper`...) sem URL consultada põe `authorship.verified = false` (no Toscanini
+  0.2.54, rascunho). O modo livro fica isento. O que mudou vai em `provenanceWarnings` (campo novo na resposta).
+- **"solicitante" no body/summary é erro de contrato** e dispara a rodada de reparo.
+- **Pesquisa**: as URLs que o Perplexity devolve em `citations`/`annotations` passam a ir para o contexto de pesquisa
+  (antes só o texto, com marcadores `[n]`), para o modelo poder citá-las e o guard reconhecê-las como consultadas.
+- **Testes**: `templates/scholion/quote-note.test.ts` (`bun test`, sem LLM; Berkopec é o caso de regressão) e
+  `templates/scholion/run-quote-fixtures.ts` + `fixtures/quote-tweets.json` (ao vivo, 5 tweets do lote; em
+  2026-11-18 com gpt-5.4: 5/5, Berkopec e Uncle Bob só com o tweet e `verified: true`, Daily Stoic/Epicteto e
+  @justsitthere/Brené Brown com `verified: false`).
+
 ## [1.8.0] — 2026-11-16
 
 ### Sem travessão nas anotações; constantes acompanham a tabela
